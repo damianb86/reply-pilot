@@ -5,7 +5,7 @@
     "build": "react-router build",
     "build:production": "sh scripts/build-production.sh",
     "prebuild": "node scripts/prisma-env.mjs generate",
-    "dev": "shopify app dev",
+    "dev": "shopify app dev --config local",
     "predev": "node scripts/prisma-env.mjs setup",
     "config:link": "shopify app config link",
     "generate": "shopify app generate",
