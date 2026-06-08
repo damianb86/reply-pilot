@@ -1,16 +1,16 @@
-# ReplyPulse AI: Review Replies
+# Reply Pulse AI: Review Replies
 
-ReplyPulse AI: Review Replies is a Shopify public embedded app configured to run as one app container on the shared Shopify apps infrastructure.
+Reply Pulse AI: Review Replies is a Shopify public embedded app configured to run as one app container on the shared Shopify apps infrastructure.
 
 ## Runtime
 
 - Shared Caddy and PostgreSQL live in `../shared-docker`.
-- ReplyPulse AI: Review Replies uses the external Docker network `shared_apps`.
-- ReplyPulse AI: Review Replies has its own PostgreSQL database and database user inside the shared PostgreSQL container.
+- Reply Pulse AI: Review Replies uses the external Docker network `shared_apps`.
+- Reply Pulse AI: Review Replies has its own PostgreSQL database and database user inside the shared PostgreSQL container.
 - Runtime secrets belong in `.env`; `.env.example` documents the required keys.
 - `APP_ENV=development` is the default local mode and uses SQLite through `DEV_DATABASE_URL`.
 - `APP_ENV=production` uses PostgreSQL through `DATABASE_URL` and publishes `SHOPIFY_APP_URL` from `PROD_SHOPIFY_APP_URL` in Docker.
-- In development, `shopify app dev` provides the Cloudflare tunnel URL through `HOST`; ReplyPulse AI: Review Replies prefers that URL over the production `SHOPIFY_APP_URL`.
+- In development, `shopify app dev` provides the Cloudflare tunnel URL through `HOST`; Reply Pulse AI: Review Replies prefers that URL over the production `SHOPIFY_APP_URL`.
 - `JUDGEME_TEST_DOMAIN_FIELD_ENABLED=true` shows the Judge.me test domain override in Connect. Leave it unset or `false` for normal installs.
 
 ## Local development

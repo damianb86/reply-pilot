@@ -132,7 +132,7 @@ export async function loadBrandVoicePageData(shop: string) {
       rating: reply.rating,
       customer: reply.customerName,
       product: reply.productTitle,
-      source: index === 0 ? "Latest ReplyPulse AI: Review Replies reply" : "ReplyPulse AI: Review Replies sent reply",
+      source: index === 0 ? "Latest Reply Pulse AI: Review Replies reply" : "Reply Pulse AI: Review Replies sent reply",
     })),
     aiModels,
     credits,

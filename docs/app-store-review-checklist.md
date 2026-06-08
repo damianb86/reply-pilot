@@ -21,7 +21,7 @@ Local pre-review updated May 8, 2026 against Shopify's App Store AI self-review 
 - [x] Credit purchases use Shopify Billing API one-time purchases.
 - [x] No checkout, payment gateway, POS, theme app extension, sales channel, post-purchase, subscription, donation, or mobile app builder extension is present.
 - [x] Judge.me setup no longer asks merchants to manually type their Shopify shop domain; it uses the authenticated Shopify session.
-- [x] Help/support copy is scoped to ReplyPulse AI: Review Replies setup and does not market external agency/freelancer services.
+- [x] Help/support copy is scoped to Reply Pulse AI: Review Replies setup and does not market external agency/freelancer services.
 
 ## Manual checks before submission
 

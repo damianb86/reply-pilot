@@ -16,7 +16,7 @@ export default function Auth() {
   const { errors } = loaderData;
   const message =
     errors.shop ||
-    "Open ReplyPulse AI: Review Replies from Shopify Admin or from the Shopify App Store to continue securely.";
+    "Open Reply Pulse AI: Review Replies from Shopify Admin or from the Shopify App Store to continue securely.";
 
   return (
     <AppProvider embedded={false}>
@@ -25,7 +25,7 @@ export default function Auth() {
           <div style={{ display: "grid", gap: "12px", maxWidth: "520px" }}>
             <p>{message}</p>
             <p>
-              ReplyPulse AI: Review Replies uses Shopify OAuth. Start the flow from Shopify so the
+              Reply Pulse AI: Review Replies uses Shopify OAuth. Start the flow from Shopify so the
               app receives the verified shop context automatically.
             </p>
           </div>

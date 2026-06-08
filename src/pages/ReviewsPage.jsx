@@ -79,7 +79,7 @@ function QueueEmptyState({connected, connectUrl, onRefresh, refreshing}) {
         <Text as="h2" variant="headingLg" alignment="center">No messages to show</Text>
         <Text as="p" variant="bodyMd" tone="subdued" alignment="center">
           {connected
-            ? 'When Judge.me has reviews ready for attention, ReplyPulse AI: Review Replies will import them here so you can review existing replies and generate new drafts.'
+            ? 'When Judge.me has reviews ready for attention, Reply Pulse AI: Review Replies will import them here so you can review existing replies and generate new drafts.'
             : 'Connect Judge.me from Connect to import reviews and start replying from Reviews.'}
         </Text>
       </BlockStack>
@@ -695,7 +695,7 @@ function ReviewsContent() {
                 {bulkProcessingVerb} {pendingIds.length} messages with {aiDisplayName}.
               </Text>
               <Text as="p" variant="bodySm" tone="subdued" alignment="center">
-                ReplyPulse AI: Review Replies is applying Brand Voice, product context, and review ratings. Keep this page open until it finishes.
+                Reply Pulse AI: Review Replies is applying Brand Voice, product context, and review ratings. Keep this page open until it finishes.
               </Text>
             </BlockStack>
             <div className="rp-processing-bar" aria-hidden="true">
@@ -935,7 +935,7 @@ function ReviewsContent() {
                           <Text as="p" variant="bodyMd">{activeReview.judgeMeReply.content}</Text>
                         ) : (
                           <Text as="p" variant="bodyMd" tone="subdued">
-                            {activeReview.judgeMeReply?.message || 'Judge.me already has an external reply for this review, but ReplyPulse AI: Review Replies could not import the reply text.'}
+                            {activeReview.judgeMeReply?.message || 'Judge.me already has an external reply for this review, but Reply Pulse AI: Review Replies could not import the reply text.'}
                           </Text>
                         )}
                         <InlineStack gap="200" blockAlign="center">
@@ -964,7 +964,7 @@ function ReviewsContent() {
                   {activeHasJudgeMeReply ? (
                     <Banner tone="info">
                       <Text as="p" variant="bodyMd">
-                        This review is already answered in Judge.me. ReplyPulse AI: Review Replies cleared the AI draft and will not generate, edit, regenerate, or approve another public reply for it.
+                        This review is already answered in Judge.me. Reply Pulse AI: Review Replies cleared the AI draft and will not generate, edit, regenerate, or approve another public reply for it.
                       </Text>
                     </Banner>
                   ) : (
@@ -1017,7 +1017,7 @@ function ReviewsContent() {
                             <DraftPlaceholderIllustration />
                             <Text as="h3" variant="headingMd" alignment="center">Draft not generated yet</Text>
                             <Text as="p" variant="bodyMd" tone="subdued" alignment="center">
-                              Generate the first message when you are ready. ReplyPulse AI: Review Replies will use Brand Voice, product context, star rating, and this review.
+                              Generate the first message when you are ready. Reply Pulse AI: Review Replies will use Brand Voice, product context, star rating, and this review.
                             </Text>
                           </div>
                         ) : (

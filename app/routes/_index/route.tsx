@@ -29,18 +29,18 @@ export default function Index() {
       <section className={styles.hero}>
         <div className={styles.copy}>
           <p className={styles.eyebrow}>Shopify embedded app</p>
-          <h1>ReplyPulse AI: Review Replies</h1>
+          <h1>Reply Pulse AI: Review Replies</h1>
           <p className={styles.lede}>
             AI drafts for Judge.me reviews, trained on the merchant's brand
             voice and approved from a Shopify-native queue.
           </p>
           <p className={styles.lede}>
-            Open ReplyPulse AI: Review Replies from Shopify Admin or from the Shopify App Store to
+            Open Reply Pulse AI: Review Replies from Shopify Admin or from the Shopify App Store to
             continue securely.
           </p>
         </div>
 
-        <div className={styles.panel} aria-label="ReplyPulse AI: Review Replies capabilities">
+        <div className={styles.panel} aria-label="Reply Pulse AI: Review Replies capabilities">
           <div>
             <strong>Review queue</strong>
             <span>Bulk approve, regenerate, or route sensitive reviews to a human.</span>
