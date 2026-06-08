@@ -105,7 +105,7 @@ export async function action({ request }: ActionFunctionArgs) {
         message: [
           `Shop: ${session.shop}`,
           "",
-          "The merchant requested deletion of all Reply Pilot app data.",
+          "The merchant requested deletion of all ReplyPulse AI: Review Replies app data.",
           "Deleted: review records, AI drafts, Brand Voice settings, Judge.me connection, app settings, credit records, contact requests, and Shopify sessions.",
         ].join("\n"),
       });
@@ -113,7 +113,7 @@ export async function action({ request }: ActionFunctionArgs) {
       return {
         ok: true,
         intent,
-        message: "All Reply Pilot app data has been permanently deleted.",
+        message: "All ReplyPulse AI: Review Replies app data has been permanently deleted.",
       };
     } catch (error) {
       console.error("[app.help.privacy-data-delete]", error);

@@ -8,11 +8,11 @@ interface LoginErrorMessage {
 export function loginErrorMessage(loginErrors: LoginError): LoginErrorMessage {
   if (loginErrors?.shop === LoginErrorType.MissingShop) {
     return {
-      shop: "Open Reply Pilot from Shopify Admin or from the Shopify App Store to continue.",
+      shop: "Open ReplyPulse AI: Review Replies from Shopify Admin or from the Shopify App Store to continue.",
     };
   } else if (loginErrors?.shop === LoginErrorType.InvalidShop) {
     return {
-      shop: "The Shopify shop context was invalid. Reopen Reply Pilot from Shopify Admin to continue.",
+      shop: "The Shopify shop context was invalid. Reopen ReplyPulse AI: Review Replies from Shopify Admin to continue.",
     };
   }
 

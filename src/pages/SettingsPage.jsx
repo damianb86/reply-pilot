@@ -247,7 +247,7 @@ export default function SettingsPage() {
         <BlockStack gap="100">
           <Text as="h1" variant="heading2xl">Settings</Text>
           <Text as="p" variant="bodyLg" tone="subdued">
-            Configure app defaults and tune the Brand Voice Reply Pilot uses for AI replies.
+            Configure app defaults and tune the Brand Voice ReplyPulse AI: Review Replies uses for AI replies.
           </Text>
         </BlockStack>
         {!isBrandVoiceSection ? (
@@ -335,7 +335,7 @@ export default function SettingsPage() {
           {activeSection === 'queue' ? (
             <SectionCard
               title="Queue behavior"
-              description="Control how Reply Pilot marks drafts for review and how Judge.me sends approved replies."
+              description="Control how ReplyPulse AI: Review Replies marks drafts for review and how Judge.me sends approved replies."
               action={<Badge tone="info">Applies on next generation/send</Badge>}
             >
               <ThresholdSlider
@@ -383,7 +383,7 @@ export default function SettingsPage() {
           {activeSection === 'privacy' ? (
             <SectionCard
               title="Data & privacy"
-              description="Control how long sent and skipped review history remains available in Reply Pilot."
+              description="Control how long sent and skipped review history remains available in ReplyPulse AI: Review Replies."
               action={(
                 <Button
                   loading={cleanupTimeout.pending}

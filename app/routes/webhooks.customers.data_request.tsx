@@ -16,7 +16,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         `Shop: ${shop}`,
         "",
         "Shopify sent a customers/data_request privacy webhook.",
-        "Reply Pilot stores merchant configuration, contact requests, app sessions, and review-reply workflow data only if the merchant connects those features.",
+        "ReplyPulse AI: Review Replies stores merchant configuration, contact requests, app sessions, and review-reply workflow data only if the merchant connects those features.",
         "Review the request in Shopify Partner Dashboard if customer-specific export is required.",
         "",
         JSON.stringify(payload, null, 2),

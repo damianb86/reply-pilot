@@ -78,7 +78,7 @@ function WizardHeader({step}) {
   const copy = {
     connect: {
       title: 'Connect your review source',
-      description: 'Start by connecting Judge.me so Reply Pilot can read reviews and sync reply status before drafting anything.',
+      description: 'Start by connecting Judge.me so ReplyPulse AI: Review Replies can read reviews and sync reply status before drafting anything.',
     },
     builder: {
       title: 'Create your first Personality',
@@ -94,11 +94,11 @@ function WizardHeader({step}) {
     },
     preview: {
       title: 'Test your guide before using it',
-      description: 'Pick a product, adjust the rating and review text, then generate a preview to see how Reply Pilot will answer.',
+      description: 'Pick a product, adjust the rating and review text, then generate a preview to see how ReplyPulse AI: Review Replies will answer.',
     },
     finish: {
       title: 'Finalize setup',
-      description: 'Save this setup once. After this, Reply Pilot will open normally and use these settings for reviews and previews.',
+      description: 'Save this setup once. After this, ReplyPulse AI: Review Replies will open normally and use these settings for reviews and previews.',
     },
   }[step.id];
 
@@ -248,7 +248,7 @@ export default function OnboardingPage() {
             <div className="rp-onboarding-finish-card">
               <span className="rp-onboarding-finish-icon"><Icon source={CheckCircleIcon} /></span>
               <BlockStack gap="250" align="center">
-                <Text as="h2" variant="heading2xl" alignment="center">Reply Pilot is ready</Text>
+                <Text as="h2" variant="heading2xl" alignment="center">ReplyPulse AI: Review Replies is ready</Text>
                 <Text as="p" variant="bodyLg" tone="subdued" alignment="center">
                   Your review source, brand voice, AI model, and preview test are configured. You can now start reviewing customer messages and generating replies.
                 </Text>

@@ -275,7 +275,7 @@ function ConnectForm({
                     Test store domain override
                   </Text>
                   <Text as="p" variant="bodySm">
-                    This field is only visible on test stores. Use it only for Judge.me testing; in production, Reply Pilot uses the authenticated Shopify store.
+                    This field is only visible on test stores. Use it only for Judge.me testing; in production, ReplyPulse AI: Review Replies uses the authenticated Shopify store.
                   </Text>
                 </BlockStack>
                 <TextField
@@ -395,7 +395,7 @@ function AfterConnectionCard({connected, appHandle}) {
   const steps = connected
     ? [
         {icon: ImportIcon, tone: 'green', title: 'Import reviews', text: "We'll keep your reviews synced and ready to process."},
-        {icon: MicrophoneIcon, tone: 'purple', title: 'Train brand voice', text: 'Paste 5-10 past replies so Reply Pilot learns your tone.'},
+        {icon: MicrophoneIcon, tone: 'purple', title: 'Train brand voice', text: 'Paste 5-10 past replies so ReplyPulse AI: Review Replies learns your tone.'},
         {icon: SendIcon, tone: 'blue', title: 'Review AI replies', text: 'Drafts will appear in the approval queue before anything is sent.'},
       ]
     : [
@@ -760,8 +760,8 @@ export default function DashboardPage() {
     ? 'Your review source is connected'
     : 'Connect your review source and start saving time';
   const pageSubtitle = connected
-    ? 'Reply Pilot is now syncing reviews and is ready for brand voice training and reply approval workflows.'
-    : 'Reply Pilot pulls your reviews, learns your brand voice, and helps you reply faster, always with human approval.';
+    ? 'ReplyPulse AI: Review Replies is now syncing reviews and is ready for brand voice training and reply approval workflows.'
+    : 'ReplyPulse AI: Review Replies pulls your reviews, learns your brand voice, and helps you reply faster, always with human approval.';
 
   return (
     <BlockStack gap="400">
