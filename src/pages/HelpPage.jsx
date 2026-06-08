@@ -35,8 +35,8 @@ const requestCards = [
     id: 'customization',
     icon: WrenchIcon,
     tone: 'coral',
-    title: 'Configure Reply Pulse AI: Review Replies',
-    description: 'Adapt review approval, AI generation, routing, and Reply Pulse AI: Review Replies workflows to the way your team handles reviews.',
+    title: 'Configure ReplyPulse AI: Review Replies',
+    description: 'Adapt review approval, AI generation, routing, and ReplyPulse AI: Review Replies workflows to the way your team handles reviews.',
     action: 'Describe review workflow',
   },
   {
@@ -61,7 +61,7 @@ const customizationServices = [
   {
     icon: SettingsIcon,
     title: 'Queue and approval workflows',
-    text: 'Review routing, team handoffs, confidence rules, skipped/sent views, and batch approval flows inside Reply Pulse AI: Review Replies.',
+    text: 'Review routing, team handoffs, confidence rules, skipped/sent views, and batch approval flows inside ReplyPulse AI: Review Replies.',
   },
   {
     icon: MagicIcon,
@@ -71,7 +71,7 @@ const customizationServices = [
   {
     icon: CodeIcon,
     title: 'Review provider setup',
-    text: 'Help connecting supported review providers, Shopify product context, and Reply Pulse AI: Review Replies approval workflows.',
+    text: 'Help connecting supported review providers, Shopify product context, and ReplyPulse AI: Review Replies approval workflows.',
   },
 ];
 
@@ -95,9 +95,9 @@ const modalContent = {
     title: 'Request customization',
     type: 'customization',
     subjectPlaceholder: 'Custom review workflow',
-    messageLabel: 'What should Reply Pulse AI: Review Replies adapt?',
+    messageLabel: 'What should ReplyPulse AI: Review Replies adapt?',
     messagePlaceholder: 'Example: Add a review escalation flow for low-confidence replies before anyone sends them.',
-    intro: 'Share the current review workflow, what feels slow or risky, and what Reply Pulse AI: Review Replies should support.',
+    intro: 'Share the current review workflow, what feels slow or risky, and what ReplyPulse AI: Review Replies should support.',
     primary: 'Send request',
   },
   suggestion: {
@@ -112,7 +112,7 @@ const modalContent = {
   support: {
     title: 'Contact support',
     type: 'support',
-    subjectPlaceholder: 'Question about Reply Pulse AI: Review Replies',
+    subjectPlaceholder: 'Question about ReplyPulse AI: Review Replies',
     messageLabel: 'How can we help?',
     messagePlaceholder: 'Example: my review provider is connected, but the Queue is not importing my newest reviews.',
     intro: 'Send enough context for us to understand or reproduce the issue.',
@@ -280,7 +280,7 @@ export default function HelpPage() {
         <BlockStack gap="100">
           <Text as="h1" variant="heading2xl">Help</Text>
           <Text as="p" variant="bodyLg" tone="subdued">
-            Workflow setup, product feedback, app support, and data controls for Reply Pulse AI: Review Replies.
+            Workflow setup, product feedback, app support, and data controls for ReplyPulse AI: Review Replies.
           </Text>
         </BlockStack>
       </InlineStack>
@@ -293,13 +293,13 @@ export default function HelpPage() {
             <Badge>Workflow setup</Badge>
           </InlineStack>
           <BlockStack gap="150">
-            <Text as="h2" variant="heading2xl">Make Reply Pulse AI: Review Replies fit the way your store works.</Text>
+            <Text as="h2" variant="heading2xl">Make ReplyPulse AI: Review Replies fit the way your store works.</Text>
             <Text as="p" variant="bodyLg" tone="subdued">
-              Our team can tune Reply Pulse AI: Review Replies, improve your approval flow, and help connect supported review operations to Shopify.
+              Our team can tune ReplyPulse AI: Review Replies, improve your approval flow, and help connect supported review operations to Shopify.
             </Text>
           </BlockStack>
           <InlineStack gap="200">
-            <Button variant="primary" icon={WrenchIcon} onClick={() => setOpenModal('customization')}>Reply Pulse AI: Review Replies setup</Button>
+            <Button variant="primary" icon={WrenchIcon} onClick={() => setOpenModal('customization')}>ReplyPulse AI: Review Replies setup</Button>
             <Button icon={LightbulbIcon} onClick={() => setOpenModal('suggestion')}>Suggest an improvement</Button>
           </InlineStack>
         </div>
@@ -325,7 +325,7 @@ export default function HelpPage() {
             <BlockStack gap="050">
               <Text as="p" variant="bodyMd" fontWeight="semibold">Need setup help?</Text>
               <Text as="p" variant="bodySm" tone="subdued">
-                Our team can help with Reply Pulse AI: Review Replies setup, supported review providers, product context, and approval workflows.
+                Our team can help with ReplyPulse AI: Review Replies setup, supported review providers, product context, and approval workflows.
               </Text>
             </BlockStack>
           </div>
@@ -389,7 +389,7 @@ export default function HelpPage() {
               <BlockStack gap="050">
                 <Text as="h2" variant="headingLg">Data & privacy</Text>
                 <Text as="p" variant="bodyMd" tone="subdued">
-                  Review what Reply Pulse AI: Review Replies stores and request deletion from inside the app.
+                  Review what ReplyPulse AI: Review Replies stores and request deletion from inside the app.
                 </Text>
               </BlockStack>
             </InlineStack>
@@ -445,7 +445,7 @@ export default function HelpPage() {
       <Modal
         open={privacyDeleteOpen}
         onClose={() => setPrivacyDeleteOpen(false)}
-        title="Delete all Reply Pulse AI: Review Replies data?"
+        title="Delete all ReplyPulse AI: Review Replies data?"
         primaryAction={{
           content: 'Delete permanently',
           destructive: true,

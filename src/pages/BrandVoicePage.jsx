@@ -52,7 +52,7 @@ export const brandVoiceSettingsSections = [
 const defaultAlwaysMention = ['product detail', 'what the customer noticed', 'next step when needed'];
 const defaultPreviewReview = 'Obsessed with these napkins. The fabric feels substantial, the print looks even better in person, and they made our dinner table feel special.';
 const tonePresetOptions = [
-  {label: 'Use personality', value: 'use_personality', description: 'No extra tone nudge. Reply Pulse AI: Review Replies follows the Personality text as the source of truth.'},
+  {label: 'Use personality', value: 'use_personality', description: 'No extra tone nudge. ReplyPulse AI: Review Replies follows the Personality text as the source of truth.'},
   {label: 'More formal', value: 'formal', description: 'Adds polish, restraint, and more precise wording when drafting replies.'},
   {label: 'More casual', value: 'casual', description: 'Makes replies feel more relaxed and conversational without becoming sloppy.'},
   {label: 'Warmer', value: 'warm', description: 'Adds more appreciation and emotional presence, especially around customer concerns.'},
@@ -66,7 +66,7 @@ const personalityStrengthOptions = [
   {label: 'Expressive', value: 'expressive', description: 'Stronger character. Useful when the brand voice is part of the customer experience.'},
 ];
 const replyLengthOptions = [
-  {label: 'Adaptive', value: 'adaptive', description: 'Lets Reply Pulse AI: Review Replies choose the right length based on rating, detail, and complexity.'},
+  {label: 'Adaptive', value: 'adaptive', description: 'Lets ReplyPulse AI: Review Replies choose the right length based on rating, detail, and complexity.'},
   {label: 'Short', value: 'short', description: '1-2 sentences. Best for simple positive reviews and quick acknowledgement.'},
   {label: 'Medium', value: 'medium', description: '2-4 sentences. Enough room for one or two specifics without feeling heavy.'},
   {label: 'Long', value: 'long', description: '4-6 sentences. Useful for mixed, detailed, or negative reviews that need care.'},
@@ -444,7 +444,7 @@ function ProductDescriptionContextPanel({
           disabled={!onChange}
         />
         <Text as="p" variant="bodyMd" tone="subdued">
-          Keep this enabled to let Reply Pulse AI: Review Replies read cleaned Shopify product descriptions when drafting replies. Turn it off if you want responses based only on the review, product title, tags, and rating.
+          Keep this enabled to let ReplyPulse AI: Review Replies read cleaned Shopify product descriptions when drafting replies. Turn it off if you want responses based only on the review, product title, tags, and rating.
         </Text>
       </BlockStack>
     </div>
@@ -1477,7 +1477,7 @@ export default function BrandVoicePage({
                     <BlockStack gap="100">
                       <Text as="h3" variant="headingMd">Generate from example replies</Text>
                       <Text as="p" variant="bodySm" tone="subdued">
-                        Reply platforms do not always expose past merchant replies. Add examples manually after you have answered a few reviews, or paste replies you wrote in another platform, so Reply Pulse AI: Review Replies can learn your real voice.
+                        Reply platforms do not always expose past merchant replies. Add examples manually after you have answered a few reviews, or paste replies you wrote in another platform, so ReplyPulse AI: Review Replies can learn your real voice.
                       </Text>
                     </BlockStack>
                     <Button
@@ -1512,7 +1512,7 @@ export default function BrandVoicePage({
                         <BlockStack gap="050">
                           <Text as="p" variant="bodyMd" fontWeight="semibold">Load sent replies from Judge.me history</Text>
                           <Text as="p" variant="bodySm" tone="subdued">
-                            Use replies that Reply Pulse AI: Review Replies already sent and stored for this shop. This does not call Judge.me; it loads your saved sent reply history.
+                            Use replies that ReplyPulse AI: Review Replies already sent and stored for this shop. This does not call Judge.me; it loads your saved sent reply history.
                           </Text>
                         </BlockStack>
                       </InlineStack>
@@ -1547,7 +1547,7 @@ export default function BrandVoicePage({
                             </Text>
                             <Text as="p" variant="bodySm" tone="subdued">
                               {manualReplyMode === 'bulk'
-                                ? "Don't want to add replies one by one? Paste many merchant replies here, one per line. Reply Pulse AI: Review Replies will treat them as separate response examples and use them to interpret the responder's personality."
+                                ? "Don't want to add replies one by one? Paste many merchant replies here, one per line. ReplyPulse AI: Review Replies will treat them as separate response examples and use them to interpret the responder's personality."
                                 : "Paste only the response that was sent to the review. You do not need to include the customer's review, because the builder learns from the reply writer's wording."}
                             </Text>
                           </BlockStack>
@@ -1585,7 +1585,7 @@ export default function BrandVoicePage({
                               maxLength={manualReplyMaxCharacters}
                               showCharacterCount
                               placeholder="Paste one reply you wrote to a customer review."
-                              helpText="Only paste the merchant reply, not the original review. This is the text Reply Pulse AI: Review Replies uses to learn the responder's personality."
+                              helpText="Only paste the merchant reply, not the original review. This is the text ReplyPulse AI: Review Replies uses to learn the responder's personality."
                             />
                           </>
                         )}
@@ -1726,7 +1726,7 @@ export default function BrandVoicePage({
                 options={visibleReplyLengthOptions}
                 value={replyLength}
                 onChange={setReplyLength}
-                helpText="Controls how much detail Reply Pulse AI: Review Replies includes before the final sign-off."
+                helpText="Controls how much detail ReplyPulse AI: Review Replies includes before the final sign-off."
               />
               {!showAdvancedLength && replyLength !== 'very_long' ? (
                 <InlineStack align="end">
@@ -1776,7 +1776,7 @@ export default function BrandVoicePage({
                 <BlockStack gap="050">
                   <Text as="h3" variant="headingMd">Reply rules</Text>
                   <Text as="p" variant="bodySm" tone="subdued">
-                    Use these as soft guidance. Reply Pulse AI: Review Replies considers them when they fit the review, but the AI should still sound natural.
+                    Use these as soft guidance. ReplyPulse AI: Review Replies considers them when they fit the review, but the AI should still sound natural.
                   </Text>
                 </BlockStack>
                 <InlineGrid columns={{xs: 1, md: 2}} gap="400">
@@ -1945,7 +1945,7 @@ export default function BrandVoicePage({
 
               <div className="rp-draft-box is-preview">
                 <Text as="p" variant="bodyLg">
-                  {livePreview || (!suppressPreviewFallback ? previewReply : 'Generate a preview to see how Reply Pulse AI: Review Replies will answer this review.')}
+                  {livePreview || (!suppressPreviewFallback ? previewReply : 'Generate a preview to see how ReplyPulse AI: Review Replies will answer this review.')}
                 </Text>
               </div>
             </BlockStack>

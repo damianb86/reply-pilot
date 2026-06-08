@@ -1,6 +1,6 @@
 import nodemailer from "nodemailer";
 
-const APP_NAME = "Reply Pulse AI: Review Replies";
+const APP_NAME = "ReplyPulse AI: Review Replies";
 
 function getSmtpConfig() {
   const port = Number(process.env.EMAIL_PORT ?? 587);

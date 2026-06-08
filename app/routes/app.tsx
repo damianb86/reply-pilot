@@ -71,7 +71,7 @@ function loadingCopyForPath(pathname: string) {
   if (pathname.endsWith("/onboarding")) {
     return {
       title: "Loading Setup",
-      description: "Preparing your first Reply Pulse AI: Review Replies setup steps...",
+      description: "Preparing your first ReplyPulse AI: Review Replies setup steps...",
     };
   }
 
@@ -116,7 +116,7 @@ export default function App() {
     <ShopifyAppProvider embedded apiKey={apiKey}>
       <PolarisAppProvider i18n={enTranslations}>
         <NavMenu>
-          <a href={withEmbeddedSearch("/app")} rel="home">Reply Pulse AI: Review Replies</a>
+          <a href={withEmbeddedSearch("/app")} rel="home">ReplyPulse AI: Review Replies</a>
           <a href={withEmbeddedSearch("/app/dashboard")}>Connect</a>
           <a href={withEmbeddedSearch("/app/reviews")}>Reviews</a>
           <a href={withEmbeddedSearch("/app/logs")}>Sent</a>

@@ -614,14 +614,14 @@ function replyGreeting(pattern?: string | null, customerName?: string | null) {
 
 function personalityPrompt(replies: ImportedReply[], context: BrandVoiceContext = {}) {
   return [
-    "Generate the Personality field for Reply Pulse AI: Review Replies, a Shopify app that drafts public replies to product reviews.",
+    "Generate the Personality field for ReplyPulse AI: Review Replies, a Shopify app that drafts public replies to product reviews.",
     "Use ONLY the imported merchant replies as evidence. Do not invent identity, names, locations, family relationships, product origin, policies, languages, materials, or brand facts.",
     "The imported replies are merchant-written responses, not customer reviews. If a pasted item contains many replies together, separate them mentally by line breaks, numbering, bullets, repeated greetings, or repeated sign-offs before inferring personality.",
     "If accidental customer review text or labels are included, ignore those parts and learn only from the merchant response wording.",
     "If a detail is not clearly present in the replies, leave it out.",
     "Focus on the durable voice and basic rules the assistant should follow: attitude, boundaries, word choice, cadence, specificity, apology style, gratitude style, and how the merchant treats customers.",
     "Do not include drafting controls such as reply length, sentence count, tone preset, voice intensity, format, or how strongly to apply the voice. Those controls are configured separately.",
-    "Match the same structure as Reply Pulse AI: Review Replies' built-in presets.",
+    "Match the same structure as ReplyPulse AI: Review Replies' built-in presets.",
     "Start exactly with: \"Brand personality: \" followed by 3-6 concise traits inferred from the replies.",
     "Then write three short plain-text paragraphs that start with these exact phrases: \"This voice\", \"Basic rules:\", and \"The goal\".",
     "The content should describe how the brand speaks and behaves in replies, not who owns the business.",
@@ -647,7 +647,7 @@ function previewPrompt(context: BrandVoiceContext) {
   const greeting = replyGreeting(context.greeting, "Anya");
 
   return [
-    "You are Reply Pulse AI: Review Replies. Generate one public reply to a product review using the merchant voice below.",
+    "You are ReplyPulse AI: Review Replies. Generate one public reply to a product review using the merchant voice below.",
     "Output the reply text only. No JSON, no Markdown, no label.",
     "Write like a thoughtful human merchant, not a review analyst.",
     "Respect the configured tone preset, voice intensity, and length. Do not make the reply shorter than requested.",
@@ -693,7 +693,7 @@ function reviewReplyPrompt(context: ReviewReplyContext) {
   const firstName = customerFirstName(context.customerName);
 
   return [
-    "You are Reply Pulse AI: Review Replies. Generate one public merchant reply to a product review.",
+    "You are ReplyPulse AI: Review Replies. Generate one public merchant reply to a product review.",
     "Output the reply text only. No JSON, no Markdown, no label.",
     "Write like a thoughtful human merchant, not a review analyst.",
     "Use the merchant voice and product context. Mention product details only when they help the reply feel specific and true.",
@@ -742,7 +742,7 @@ function reviewReplyRevisionPrompt(context: ReviewReplyRevisionContext) {
   const avoidPhrases = quotedRuleList(context.avoidPhrases);
 
   return [
-    "You are Reply Pulse AI: Review Replies. Edit an existing public merchant reply to a product review.",
+    "You are ReplyPulse AI: Review Replies. Edit an existing public merchant reply to a product review.",
     "Output the revised reply text only. No JSON, no Markdown, no label.",
     "This is a revision task, not a fresh generation task.",
     "Start from the current draft and make the smallest useful change that satisfies the merchant instruction.",

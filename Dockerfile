@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1.7
 FROM node:20-alpine
 RUN apk add --no-cache openssl
 
@@ -10,10 +11,10 @@ ENV APP_ENV=production
 
 COPY package.json package-lock.json* ./
 
-RUN npm ci
+RUN --mount=type=cache,target=/root/.npm npm ci --omit=dev
 
-COPY . .
-
-RUN APP_ENV=production node scripts/prisma-env.mjs generate && npm run build && npm prune --omit=dev && npm cache clean --force
+COPY prisma ./prisma
+COPY scripts ./scripts
+COPY build ./build
 
 CMD ["npm", "run", "docker-start"]

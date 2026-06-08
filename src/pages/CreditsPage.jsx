@@ -170,7 +170,7 @@ export default function CreditsPage() {
         <BlockStack gap="100">
           <Text as="h1" variant="heading2xl">Credits</Text>
           <Text as="p" variant="bodyLg" tone="subdued">
-            Credits are assigned to this shop and are spent only when Reply Pulse AI: Review Replies generates AI content.
+            Credits are assigned to this shop and are spent only when ReplyPulse AI: Review Replies generates AI content.
           </Text>
         </BlockStack>
         <Badge tone={credits.balance <= 25 ? 'critical' : 'info'}>{formatCreditNumber(credits.balance)} credits left</Badge>

@@ -1880,8 +1880,8 @@ export async function approveAndSendDrafts(shop: string, ids: string[]) {
       const sourceReply = extractJudgeMeSourceReply(safeJsonParse(record.sourceReviewJson));
       if (sourceReply?.present) {
         const message = sourceReply.contentAvailable
-          ? "Judge.me already has a public reply for this review. Reply Pulse AI: Review Replies did not send or change anything."
-          : "Judge.me already has an external reply for this review, but Reply Pulse AI: Review Replies could not import the reply text.";
+          ? "Judge.me already has a public reply for this review. ReplyPulse AI: Review Replies did not send or change anything."
+          : "Judge.me already has an external reply for this review, but ReplyPulse AI: Review Replies could not import the reply text.";
         alreadyReplied.push({ id: record.id, reviewId: record.sourceReviewId, message });
         await markDraftAsExternalJudgeMeReply(record, message);
         continue;
@@ -1910,7 +1910,7 @@ export async function approveAndSendDrafts(shop: string, ids: string[]) {
       sent += 1;
     } catch (error) {
       if (judgeMeAlreadyRepliedMessage(error)) {
-        const message = "Judge.me rejected this review because it already has a reply. Reply Pulse AI: Review Replies did not send or change anything.";
+        const message = "Judge.me rejected this review because it already has a reply. ReplyPulse AI: Review Replies did not send or change anything.";
         alreadyReplied.push({ id: record.id, reviewId: record.sourceReviewId, message });
         await markDraftAsExternalJudgeMeReply(record, message);
       } else {

@@ -10,10 +10,10 @@ Store owner, support lead, or ecommerce ops manager responsible for review respo
 Small to mid-size Shopify merchant with an active review flow, usually using Judge.me, who wants faster reply drafting while keeping final approval inside Shopify Admin.
 
 ## Value proposition
-Reply Pulse AI: Review Replies imports Judge.me reviews, generates AI reply drafts using a saved Brand Voice, routes sensitive reviews to humans, tracks sent replies, and charges credits according to model tier and operation.
+ReplyPulse AI: Review Replies imports Judge.me reviews, generates AI reply drafts using a saved Brand Voice, routes sensitive reviews to humans, tracks sent replies, and charges credits according to model tier and operation.
 
 ## Primary flow
-1. Merchant opens Reply Pulse AI: Review Replies embedded in Shopify Admin.
+1. Merchant opens ReplyPulse AI: Review Replies embedded in Shopify Admin.
 2. Merchant connects Judge.me with a private API token.
 3. Merchant configures Brand Voice, greeting, sign-off, avoided phrases, selected AI model, and reply length.
 4. Merchant syncs reviews into Queue.
