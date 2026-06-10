@@ -37,6 +37,56 @@ function LedgerAmount({amount}) {
   );
 }
 
+function ReplyCapacityBadges({capacity}) {
+  if (!capacity) return null;
+
+  return (
+    <InlineStack gap="150" blockAlign="center" wrap>
+      <Badge tone="info">Basic: {formatCreditNumber(capacity.basic)} replies</Badge>
+      <Badge tone="info">Pro: {formatCreditNumber(capacity.pro)} replies</Badge>
+      <Badge tone="info">Premium: {formatCreditNumber(capacity.premium)} replies</Badge>
+    </InlineStack>
+  );
+}
+
+function PlanFeatureBadges({features}) {
+  if (!features?.length) return null;
+
+  return (
+    <InlineStack gap="150" blockAlign="center" wrap>
+      {features.map((feature) => (
+        <Badge key={feature}>{feature}</Badge>
+      ))}
+    </InlineStack>
+  );
+}
+
+function FreePlanCard({plan}) {
+  if (!plan) return null;
+
+  return (
+    <Card>
+      <BlockStack gap="300">
+        <InlineStack align="space-between" blockAlign="start" gap="300">
+          <BlockStack gap="050">
+            <InlineStack gap="150" blockAlign="center">
+              <Text as="h2" variant="headingLg">{plan.name}</Text>
+              <Badge tone="success">Included</Badge>
+            </InlineStack>
+            <Text as="p" variant="bodyMd" tone="subdued">{plan.description}</Text>
+          </BlockStack>
+          <Text as="span" variant="headingLg">{plan.priceLabel}</Text>
+        </InlineStack>
+        <Text as="p" variant="bodyMd" fontWeight="semibold">
+          {formatCreditNumber(plan.credits)} welcome credits
+        </Text>
+        <ReplyCapacityBadges capacity={plan.replyCapacity} />
+        <PlanFeatureBadges features={plan.features} />
+      </BlockStack>
+    </Card>
+  );
+}
+
 function PackageCard({pkg, fetcher, pending}) {
   const isLoading = pending && fetcher.formData?.get('packageId') === pkg.id;
   const hasWelcomeBonus = Boolean(pkg.firstPurchaseBonusAvailable && pkg.firstPurchaseBonusCredits);
@@ -74,6 +124,8 @@ function PackageCard({pkg, fetcher, pending}) {
             </span>
           </fetcher.Form>
         </InlineStack>
+        <ReplyCapacityBadges capacity={hasWelcomeBonus ? pkg.firstPurchaseReplyCapacity : pkg.replyCapacity} />
+        <PlanFeatureBadges features={pkg.features} />
       </BlockStack>
     </Card>
   );
@@ -201,9 +253,9 @@ export default function CreditsPage() {
         <BlockStack gap="300">
           <InlineStack align="space-between" blockAlign="start" gap="300">
             <BlockStack gap="050">
-              <Text as="h2" variant="headingLg">Buy credits</Text>
+              <Text as="h2" variant="headingLg">Choose your credit plan</Text>
               <Text as="p" variant="bodyMd" tone="subdued">
-                Purchases use Shopify billing. After approval, credits are added to this shop automatically.
+                Every plan includes the same ReplyPulse features. Pick the credit volume that matches your review queue.
               </Text>
             </BlockStack>
             {credits.firstPurchaseBonusAvailable ? (
@@ -214,7 +266,8 @@ export default function CreditsPage() {
               </div>
             ) : null}
           </InlineStack>
-          <InlineGrid columns={{xs: 1, sm: 2, lg: 4}} gap="300">
+          <FreePlanCard plan={credits.freePlan} />
+          <InlineGrid columns={{xs: 1, sm: 2, lg: 3}} gap="300">
             {credits.packages.map((pkg) => (
               <PackageCard key={pkg.id} pkg={pkg} fetcher={purchaseFetcher} pending={timeout.pending} />
             ))}

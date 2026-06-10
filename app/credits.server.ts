@@ -23,6 +23,36 @@ const OPERATION_BASE_COSTS: Record<CreditOperation, number> = {
   preview: 1,
   personality: 2,
 };
+const REPLY_CAPACITY_MODELS = ["basic", "pro", "premium"] as const;
+
+function replyCapacityForCredits(credits: number) {
+  return Object.fromEntries(
+    REPLY_CAPACITY_MODELS.map((modelId) => [
+      modelId,
+      Math.floor(credits / creditCostForReviewReply(modelId)),
+    ]),
+  );
+}
+
+function freePlanView() {
+  return {
+    id: "free",
+    name: "Free",
+    credits: INITIAL_FREE_CREDITS,
+    amountCents: 0,
+    currencyCode: "USD",
+    price: 0,
+    priceLabel: "Free",
+    description: "Explore every ReplyPulse feature with welcome credits before buying.",
+    features: [
+      "All core features included",
+      "100 credits to test replies",
+      "Brand Voice and approval flow",
+      "Upgrade only when volume grows",
+    ],
+    replyCapacity: replyCapacityForCredits(INITIAL_FREE_CREDITS),
+  };
+}
 
 export const CREDIT_PACKAGES = [
   {
@@ -31,7 +61,13 @@ export const CREDIT_PACKAGES = [
     credits: 1000,
     amountCents: 500,
     currencyCode: "USD",
-    description: "A light top-up for setup, previews, and small review batches.",
+    description: "A light credit pack for new stores building a review reply habit.",
+    features: [
+      "All core features included",
+      "1,000 credits for launch",
+      "About 250 Pro replies",
+      "Great for new review queues",
+    ],
   },
   {
     id: "growth",
@@ -39,7 +75,13 @@ export const CREDIT_PACKAGES = [
     credits: 3500,
     amountCents: 1500,
     currencyCode: "USD",
-    description: "A practical pack for regular Queue work and weekly review batches.",
+    description: "More room for active stores syncing and answering reviews weekly.",
+    features: [
+      "All core features included",
+      "3,500 credits for active stores",
+      "About 875 Pro replies",
+      "Built for weekly review work",
+    ],
     recommended: true,
   },
   {
@@ -48,15 +90,13 @@ export const CREDIT_PACKAGES = [
     credits: 10000,
     amountCents: 3900,
     currencyCode: "USD",
-    description: "Lower effective cost for stores with high review volume.",
-  },
-  {
-    id: "business",
-    name: "Business",
-    credits: 30000,
-    amountCents: 9900,
-    currencyCode: "USD",
-    description: "Best value for busy stores using Pro or Premium heavily.",
+    description: "Best value for high-volume stores and larger review queues.",
+    features: [
+      "All core features included",
+      "10,000 credits for busy stores",
+      "About 2,500 Pro replies",
+      "Best value for high volume",
+    ],
   },
 ];
 
@@ -198,6 +238,8 @@ function packageView(pkg: (typeof CREDIT_PACKAGES)[number], includeFirstPurchase
     firstPurchaseBonusCredits: bonusCredits,
     firstPurchaseTotalCredits: pkg.credits + bonusCredits,
     firstPurchaseBonusPercent: FIRST_PURCHASE_BONUS_PERCENT,
+    replyCapacity: replyCapacityForCredits(pkg.credits),
+    firstPurchaseReplyCapacity: replyCapacityForCredits(pkg.credits + bonusCredits),
     price: pkg.amountCents / 100,
     priceLabel: formatCurrency(pkg.amountCents, pkg.currencyCode),
   };
@@ -287,6 +329,7 @@ export async function getCreditOverview(shop: string) {
     },
     firstPurchaseBonusAvailable,
     firstPurchaseBonusPercent: FIRST_PURCHASE_BONUS_PERCENT,
+    freePlan: freePlanView(),
     packages: CREDIT_PACKAGES.map((pkg) => packageView(pkg, firstPurchaseBonusAvailable)),
     modelCosts: {
       dev: creditCostsForModel("dev"),

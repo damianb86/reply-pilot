@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import {
   CreditError,
+  CREDIT_PACKAGES,
   creditCostForOperation,
   creditCostForReviewReply,
   creditCostsForModel,
@@ -20,6 +21,29 @@ afterEach(() => {
 });
 
 describe("credits.server", () => {
+  it("offers only the public credit plans shown in Shopify", () => {
+    expect(CREDIT_PACKAGES.map((pkg) => pkg.id)).toEqual(["starter", "growth", "scale"]);
+  });
+
+  it("maps public credit plans to expected reply capacity", () => {
+    const capacityByPackage = Object.fromEntries(
+      CREDIT_PACKAGES.map((pkg) => [
+        pkg.id,
+        {
+          basic: Math.floor(pkg.credits / creditCostForReviewReply("basic")),
+          pro: Math.floor(pkg.credits / creditCostForReviewReply("pro")),
+          premium: Math.floor(pkg.credits / creditCostForReviewReply("premium")),
+        },
+      ]),
+    );
+
+    expect(capacityByPackage).toEqual({
+      starter: { basic: 1000, pro: 250, premium: 83 },
+      growth: { basic: 3500, pro: 875, premium: 291 },
+      scale: { basic: 10000, pro: 2500, premium: 833 },
+    });
+  });
+
   it("maps model tiers to credit multipliers", () => {
     expect(creditMultiplierForModel("basic")).toBe(1);
     expect(creditMultiplierForModel("pro")).toBe(4);
