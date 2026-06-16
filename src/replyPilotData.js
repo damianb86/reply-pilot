@@ -3,7 +3,7 @@ export const onboardingSteps = [
     id: 'connect',
     step: '1',
     title: 'Connect a review source',
-    description: 'Paste Judge.me API token',
+    description: 'Paste review source credentials',
   },
   {
     id: 'voice',
@@ -40,8 +40,9 @@ export const reviewSources = [
     id: 'yotpo',
     initials: 'Y',
     name: 'Yotpo',
-    detail: 'Reviews and loyalty',
-    votes: 154,
+    detail: 'Imports Yotpo reviews and sends public comments from the queue.',
+    merchants: 'Yotpo merchants',
+    available: true,
   },
   {
     id: 'stamped',

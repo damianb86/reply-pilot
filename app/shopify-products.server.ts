@@ -15,7 +15,7 @@ export type ShopifyProductSummary = {
 };
 
 const PRODUCTS_QUERY = `#graphql
-  query ReplyPilotProducts($first: Int!) {
+  query ReplyPulseProducts($first: Int!) {
     products(first: $first, sortKey: TITLE) {
       edges {
         node {
@@ -31,7 +31,7 @@ const PRODUCTS_QUERY = `#graphql
 `;
 
 const PRODUCT_BY_ID_QUERY = `#graphql
-  query ReplyPilotProduct($id: ID!) {
+  query ReplyPulseProduct($id: ID!) {
     product(id: $id) {
       id
       title
@@ -44,7 +44,7 @@ const PRODUCT_BY_ID_QUERY = `#graphql
 `;
 
 const PRODUCT_BY_HANDLE_QUERY = `#graphql
-  query ReplyPilotProductByHandle($query: String!) {
+  query ReplyPulseProductByHandle($query: String!) {
     products(first: 1, query: $query) {
       edges {
         node {
@@ -61,7 +61,7 @@ const PRODUCT_BY_HANDLE_QUERY = `#graphql
 `;
 
 const PRODUCT_BY_TITLE_QUERY = `#graphql
-  query ReplyPilotProductByTitle($query: String!) {
+  query ReplyPulseProductByTitle($query: String!) {
     products(first: 1, query: $query) {
       edges {
         node {

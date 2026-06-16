@@ -7,7 +7,7 @@ import {
   resolveAiModelId,
 } from "./ai.server";
 import { getCreditOverview } from "./credits.server";
-import { getJudgeMeConnectionView } from "./judgeme.server";
+import { getReviewSourceConnectionView } from "./review-source.server";
 
 type ImportedReply = {
   id: string;
@@ -110,10 +110,11 @@ function mapBrandVoiceSettings(
 }
 
 export async function loadBrandVoicePageData(shop: string) {
-  const [connection, recentSentReplies, settings, aiModels, credits] = await Promise.all([
-    getJudgeMeConnectionView(shop),
+  const connection = await getReviewSourceConnectionView(shop);
+  const sourceWhere = connection?.status === "connected" ? { source: connection.provider } : {};
+  const [recentSentReplies, settings, aiModels, credits] = await Promise.all([
     db.reviewDraft.findMany({
-      where: { shop, status: "sent" },
+      where: { shop, status: "sent", ...sourceWhere },
       orderBy: [{ sentAt: "desc" }, { updatedAt: "desc" }],
       take: 10,
     }),
@@ -132,7 +133,7 @@ export async function loadBrandVoicePageData(shop: string) {
       rating: reply.rating,
       customer: reply.customerName,
       product: reply.productTitle,
-      source: index === 0 ? "Latest ReplyPulse AI: Review Replies reply" : "ReplyPulse AI: Review Replies sent reply",
+      source: index === 0 ? "Latest ReplyPulse reply" : "ReplyPulse sent reply",
     })),
     aiModels,
     credits,
@@ -142,8 +143,10 @@ export async function loadBrandVoicePageData(shop: string) {
 
 export async function loadSentReplyExamplesForBrandVoice(shop: string, limit: number) {
   const safeLimit = Math.max(5, Math.min(limit || 10, 50));
+  const connection = await getReviewSourceConnectionView(shop);
+  const sourceWhere = connection?.status === "connected" ? { source: connection.provider } : {};
   const sentReplies = await db.reviewDraft.findMany({
-    where: { shop, status: "sent" },
+    where: { shop, status: "sent", ...sourceWhere },
     orderBy: [{ sentAt: "desc" }, { updatedAt: "desc" }],
     take: safeLimit,
   });
@@ -155,7 +158,7 @@ export async function loadSentReplyExamplesForBrandVoice(shop: string, limit: nu
       rating: reply.rating,
       customer: reply.customerName,
       product: reply.productTitle,
-      source: index === 0 ? "Latest sent Judge.me reply" : "Sent Judge.me reply",
+      source: index === 0 ? "Latest sent review source reply" : "Sent review source reply",
     })),
     importedCount: sentReplies.length,
     requestedCount: safeLimit,

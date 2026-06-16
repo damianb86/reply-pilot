@@ -8,6 +8,12 @@ import {
 } from "./ai.server";
 import { callJudgeMeApi, decryptSecret, JudgeMeApiError } from "./judgeme.server";
 import {
+  callYotpoApi,
+  commentOnYotpoReview,
+  getConnectedYotpoCredentials,
+  YotpoApiError,
+} from "./yotpo.server";
+import {
   cleanupExpiredReviewHistory,
   isSameTimeZoneDay,
   loadAppSettings,
@@ -21,6 +27,7 @@ import {
   refundCredits,
   spendCredits,
 } from "./credits.server";
+import { getReviewSourceConnectionView } from "./review-source.server";
 import {
   findProductByTitle,
   loadShopifyProductByHandle,
@@ -31,6 +38,16 @@ import {
 } from "./shopify-products.server";
 
 type AdminGraphql = Parameters<typeof loadShopifyProducts>[0];
+type ReviewSourceProvider = "judgeme" | "yotpo";
+const REVIEW_QUEUE_PAGE_SIZE = 10;
+
+function normalizeReviewSource(source?: string | null): ReviewSourceProvider {
+  return source === "yotpo" ? "yotpo" : "judgeme";
+}
+
+function reviewSourceName(source?: string | null) {
+  return normalizeReviewSource(source) === "yotpo" ? "Yotpo" : "Judge.me";
+}
 
 function readObject(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value)
@@ -63,6 +80,31 @@ function readNumber(value: unknown, fallback = 0) {
     return Number(value);
   }
   return fallback;
+}
+
+function readOptionalNumber(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim() && !Number.isNaN(Number(value))) {
+    return Number(value);
+  }
+  return null;
+}
+
+function normalizeQueuePage(value?: number | string | null) {
+  const page = typeof value === "number" ? value : Number(value || 1);
+  return Number.isFinite(page) && page > 0 ? Math.floor(page) : 1;
+}
+
+function normalizeQueuePageSize(value?: number | string | null) {
+  const pageSize = typeof value === "number" ? value : Number(value || REVIEW_QUEUE_PAGE_SIZE);
+  if (!Number.isFinite(pageSize) || pageSize <= 0) return REVIEW_QUEUE_PAGE_SIZE;
+  return Math.floor(pageSize) >= 20 ? 20 : REVIEW_QUEUE_PAGE_SIZE;
+}
+
+function pageCount(totalCount: number | null | undefined, pageSize: number) {
+  return typeof totalCount === "number" && totalCount >= 0
+    ? Math.max(1, Math.ceil(totalCount / pageSize))
+    : null;
 }
 
 function compactJson(value: unknown) {
@@ -129,6 +171,18 @@ function judgeMeAlreadyRepliedMessage(error: unknown) {
     text.includes("reply") ||
     text.includes("replied")
   );
+}
+
+function yotpoAlreadyCommentedMessage(error: unknown) {
+  const text = [
+    error instanceof Error ? error.message : "",
+    error instanceof YotpoApiError ? JSON.stringify(error.details ?? "") : "",
+  ].join(" ").toLowerCase();
+
+  return (
+    text.includes("already") &&
+    (text.includes("comment") || text.includes("reply") || text.includes("replied"))
+  ) || text.includes("maximum of one comment");
 }
 
 function initialsFromName(name: string) {
@@ -612,9 +666,16 @@ function productLookupFromReview(rawReview: unknown) {
 
   return {
     externalId: firstScalarString(
+      review.external_product_id,
+      review.domain_key,
+      review.sku,
       review.product_external_id,
       review.product_id,
       review.shopify_product_id,
+      review.product_sku,
+      product.external_product_id,
+      product.domain_key,
+      product.sku,
       product.external_id,
       product.product_external_id,
       product.shopify_product_id,
@@ -628,6 +689,7 @@ function productLookupFromReview(rawReview: unknown) {
     ),
     handle: firstScalarString(
       review.product_handle,
+      review.product_url,
       product.handle,
       product.product_handle,
       productData.handle,
@@ -636,6 +698,7 @@ function productLookupFromReview(rawReview: unknown) {
     ),
     title: firstScalarString(
       review.product_title,
+      review.product_name,
       product.title,
       product.name,
       productData.title,
@@ -645,20 +708,54 @@ function productLookupFromReview(rawReview: unknown) {
   };
 }
 
-function reviewFields(rawReview: unknown) {
+function reviewFields(rawReview: unknown, source: ReviewSourceProvider = "judgeme") {
   const review = readObject(rawReview);
   const reviewer = readObject(review.reviewer);
+  const user = readObject(review.user);
+  const customerData = readObject(review.customer);
   const productLookup = productLookupFromReview(rawReview);
-  const id = String(review.id ?? "");
+  const id = firstScalarString(review.id, review.review_id);
   const customer =
-    readString(reviewer.name) ||
-    readString(review.name) ||
-    readString(review.reviewer_name) ||
-    readString(reviewer.email) ||
+    firstScalarString(
+      reviewer.name,
+      review.name,
+      review.reviewer_name,
+      review.reviewer_display_name,
+      review.display_name,
+      review.customer_name,
+      customerData.name,
+      user.display_name,
+      user.name,
+      reviewer.email,
+      review.email,
+      review.customer_email,
+      customerData.email,
+      user.email,
+    ) ||
     "Customer";
-  const body = readString(review.body) || readString(review.title) || "No review body provided.";
-  const rating = Math.round(readNumber(review.rating, 0));
-  const createdAt = readString(review.created_at) ? new Date(readString(review.created_at)) : new Date();
+  const body =
+    firstScalarString(
+      source === "yotpo" ? review.content : review.body,
+      review.body,
+      review.review,
+      review.text,
+      review.message,
+      review.content,
+      review.title,
+    ) || "No review body provided.";
+  const rating = Math.round(
+    source === "yotpo"
+      ? readNumber(review.score, readNumber(review.rating, 0))
+      : readNumber(review.rating, readNumber(review.score, 0)),
+  );
+  const createdAtValue = firstScalarString(
+    review.created_at,
+    review.createdAt,
+    review.date,
+    review.review_date,
+    review.updated_at,
+  );
+  const createdAt = createdAtValue ? new Date(createdAtValue) : new Date();
 
   return {
     id,
@@ -714,7 +811,7 @@ function readReplyDate(value: unknown): string | null {
   return date || null;
 }
 
-function readReplyAuthor(value: unknown): string {
+function readReplyAuthor(value: unknown, fallbackAuthor = "Judge.me"): string {
   const object = readObject(value);
   const author = readObject(object.author);
   return (
@@ -722,11 +819,15 @@ function readReplyAuthor(value: unknown): string {
     readString(object.name) ||
     readString(author.name) ||
     readString(author.email) ||
-    "Judge.me"
+    fallbackAuthor
   );
 }
 
-function sourceReplyFromCandidate(value: unknown, visibility: string): JudgeMeSourceReply | null {
+function sourceReplyFromCandidate(
+  value: unknown,
+  visibility: string,
+  fallbackAuthor = "Judge.me",
+): JudgeMeSourceReply | null {
   if (value === undefined || value === null || value === false) return null;
 
   const content = readReplyContent(value);
@@ -737,7 +838,7 @@ function sourceReplyFromCandidate(value: unknown, visibility: string): JudgeMeSo
     present: true,
     content,
     createdAt: readReplyDate(value),
-    author: readReplyAuthor(value),
+    author: readReplyAuthor(value, fallbackAuthor),
     visibility,
     contentAvailable: Boolean(content),
   };
@@ -847,7 +948,7 @@ function extractWidgetReplies(response: unknown) {
   return replies;
 }
 
-function readCachedReply(rawReview: Record<string, unknown>): JudgeMeSourceReply | null {
+function readCachedReply(rawReview: Record<string, unknown>, fallbackAuthor = "Judge.me"): JudgeMeSourceReply | null {
   const cache = readObject(rawReview.__replyPilot);
   const sourceReply = readObject(cache.sourceReply);
   const content = readReplyContent(sourceReply);
@@ -857,14 +958,14 @@ function readCachedReply(rawReview: Record<string, unknown>): JudgeMeSourceReply
       present: true,
       content,
       createdAt: readReplyDate(sourceReply),
-      author: readReplyAuthor(sourceReply),
+      author: readReplyAuthor(sourceReply, fallbackAuthor),
       visibility: readString(sourceReply.visibility) || "public",
       contentAvailable: Boolean(content),
       message: readString(sourceReply.message) || undefined,
     };
   }
 
-  const reply = sourceReplyFromCandidate(cache.sourceReply, "public");
+  const reply = sourceReplyFromCandidate(cache.sourceReply, "public", fallbackAuthor);
   return reply?.present ? reply : null;
 }
 
@@ -880,28 +981,30 @@ function mergeCachedReply(rawReview: unknown, reply: JudgeMeSourceReply) {
   };
 }
 
-function markRawReviewAsAlreadyReplied(rawReview: unknown, message: string) {
+function markRawReviewAsAlreadyReplied(rawReview: unknown, message: string, author = "Judge.me") {
   return mergeCachedReply(rawReview, {
     present: true,
     content: "",
     createdAt: null,
-    author: "Judge.me",
+    author,
     visibility: "public",
     contentAvailable: false,
     message,
   });
 }
 
-function extractJudgeMeSourceReply(rawReview: unknown): JudgeMeSourceReply | null {
+function extractJudgeMeSourceReply(rawReview: unknown, fallbackAuthor = "Judge.me"): JudgeMeSourceReply | null {
   const review = readObject(rawReview);
-  const cachedReply = readCachedReply(review);
+  const cachedReply = readCachedReply(review, fallbackAuthor);
   if (cachedReply) return cachedReply;
 
   const directCandidates: Array<[unknown, string]> = [
+    [review.comment, "public"],
     [review.reply, "public"],
     [review.public_reply, "public"],
     [review.shop_reply, "public"],
     [review.merchant_reply, "public"],
+    [review.merchant_comment, "public"],
     [review.store_reply, "public"],
     [review.response, "public"],
     [review.answer, "public"],
@@ -916,12 +1019,12 @@ function extractJudgeMeSourceReply(rawReview: unknown): JudgeMeSourceReply | nul
 
   const foundReplies = [
     ...directCandidates
-      .map(([value, visibility]) => sourceReplyFromCandidate(value, visibility))
+      .map(([value, visibility]) => sourceReplyFromCandidate(value, visibility, fallbackAuthor))
       .filter((reply): reply is JudgeMeSourceReply => Boolean(reply)),
     ...arrayCandidates.flatMap(([value, visibility]) => (
       Array.isArray(value)
         ? value
-            .map((item) => sourceReplyFromCandidate(item, visibility))
+            .map((item) => sourceReplyFromCandidate(item, visibility, fallbackAuthor))
             .filter((reply): reply is JudgeMeSourceReply => Boolean(reply))
         : []
     )),
@@ -940,13 +1043,21 @@ function extractJudgeMeSourceReply(rawReview: unknown): JudgeMeSourceReply | nul
       present: true,
       content: "",
       createdAt: readReplyDate(review),
-      author: "Judge.me",
+      author: fallbackAuthor,
       visibility: "public",
       contentAvailable: false,
     };
   }
 
   return null;
+}
+
+function extractSourceReply(rawReview: unknown, source?: string | null) {
+  return extractJudgeMeSourceReply(rawReview, reviewSourceName(source));
+}
+
+function extractSourceReplyForRecord(record: { source: string; sourceReviewJson?: string | null }) {
+  return extractSourceReply(safeJsonParse(record.sourceReviewJson), record.source);
 }
 
 async function getConnectedJudgeMeCredentials(shop: string) {
@@ -963,6 +1074,104 @@ type ImportedJudgeMeReview = {
   rawReview: unknown;
   fields: ReturnType<typeof reviewFields>;
 };
+
+type ReviewSourceSyncOptions = {
+  page?: number | string | null;
+  pageSize?: number | string | null;
+};
+
+function reviewsFromResponse(response: unknown) {
+  const data = readObject(response);
+  const nestedResponse = readObject(data.response);
+  const nestedData = readObject(data.data);
+  const candidates = [
+    data.reviews,
+    nestedData.reviews,
+    nestedResponse.reviews,
+    data.items,
+    nestedData.items,
+    nestedResponse.items,
+  ];
+
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate)) return candidate as unknown[];
+  }
+
+  return [];
+}
+
+function reviewCountFromResponse(response: unknown) {
+  const data = readObject(response);
+  const nestedResponse = readObject(data.response);
+  const nestedData = readObject(data.data);
+  const pagination = readObject(data.pagination);
+  const responsePagination = readObject(nestedResponse.pagination);
+  const dataPagination = readObject(nestedData.pagination);
+  const bottomline = readObject(nestedResponse.bottomline);
+  const candidates = [
+    data.count,
+    data.total,
+    data.total_count,
+    data.review_count,
+    data.reviews_count,
+    data.total_reviews,
+    data.total_results,
+    pagination.total,
+    pagination.total_count,
+    nestedResponse.count,
+    nestedResponse.total,
+    nestedResponse.total_count,
+    nestedResponse.total_reviews,
+    nestedResponse.total_results,
+    responsePagination.total,
+    responsePagination.total_count,
+    bottomline.total_review,
+    nestedData.count,
+    nestedData.total,
+    nestedData.total_count,
+    nestedData.total_reviews,
+    nestedData.total_results,
+    dataPagination.total,
+    dataPagination.total_count,
+  ];
+
+  for (const candidate of candidates) {
+    const count = readOptionalNumber(candidate);
+    if (count !== null && count >= 0) return Math.floor(count);
+  }
+
+  return null;
+}
+
+function reviewRecordWhere(shop: string, source?: ReviewSourceProvider | null) {
+  return {
+    shop,
+    ...(source ? { source } : {}),
+    status: { in: ["pending", "skipped", "sent"] },
+  };
+}
+
+const REVIEW_RECORD_ORDER = [{ sourceCreatedAt: "desc" as const }, { createdAt: "desc" as const }];
+
+async function cachedReviewSourcePage(
+  shop: string,
+  source: ReviewSourceProvider,
+  page: number,
+  pageSize: number,
+  totalPages?: number | null,
+) {
+  const records = await db.reviewDraft.findMany({
+    where: reviewRecordWhere(shop, source),
+    orderBy: REVIEW_RECORD_ORDER,
+    skip: (page - 1) * pageSize,
+    take: pageSize,
+    select: { id: true },
+  });
+
+  if (records.length >= pageSize) return true;
+  if (totalPages && page >= totalPages) return records.length > 0 || page === 1;
+  return false;
+}
 
 async function loadWidgetRepliesForImportedReviews(
   reviews: ImportedJudgeMeReview[],
@@ -1008,19 +1217,36 @@ async function loadWidgetRepliesForImportedReviews(
   return replies;
 }
 
-export async function syncJudgeMeReviews(shop: string, admin?: AdminGraphql) {
+export async function syncJudgeMeReviews(
+  shop: string,
+  admin?: AdminGraphql,
+  options: ReviewSourceSyncOptions = {},
+) {
+  const page = normalizeQueuePage(options.page);
+  const pageSize = normalizeQueuePageSize(options.pageSize);
   const credentials = await getConnectedJudgeMeCredentials(shop);
-  if (!credentials) return { connected: false, imported: 0 };
+  if (!credentials) return { connected: false, imported: 0, provider: "judgeme" as const, page, pageSize };
   const products = await loadShopifyProducts(admin).catch(() => [] as ShopifyProductSummary[]);
 
-  const response = await callJudgeMeApi("/reviews", {
-    apiToken: credentials.apiToken,
-    shopDomain: credentials.shopDomain,
-    searchParams: { per_page: 50, page: 1 },
-  });
-  const reviews = Array.isArray(readObject(response).reviews)
-    ? (readObject(response).reviews as unknown[])
-    : [];
+  const [response, countResponse] = await Promise.all([
+    callJudgeMeApi("/reviews", {
+      apiToken: credentials.apiToken,
+      shopDomain: credentials.shopDomain,
+      searchParams: { per_page: pageSize, page },
+    }),
+    callJudgeMeApi("/reviews/count", {
+      apiToken: credentials.apiToken,
+      shopDomain: credentials.shopDomain,
+    }).catch(() => null),
+  ]);
+  const reviews = reviewsFromResponse(response);
+  const totalCount = reviewCountFromResponse(countResponse);
+  if (totalCount !== null) {
+    await db.judgeMeConnection.updateMany({
+      where: { shop },
+      data: { reviewCount: totalCount },
+    });
+  }
   const importedReviews = reviews
     .map((rawReview) => ({ rawReview, fields: reviewFields(rawReview) }))
     .filter((review) => Boolean(review.fields.id));
@@ -1108,16 +1334,166 @@ export async function syncJudgeMeReviews(shop: string, admin?: AdminGraphql) {
     }
   }
 
-  return { connected: true, imported };
+  const totalPages = pageCount(totalCount, pageSize);
+  return {
+    connected: true,
+    imported,
+    provider: "judgeme" as const,
+    page,
+    pageSize,
+    fetched: reviews.length,
+    totalCount,
+    totalPages,
+    hasNextPage: totalPages ? page < totalPages : reviews.length >= pageSize,
+  };
+}
+
+export async function syncYotpoReviews(
+  shop: string,
+  admin?: AdminGraphql,
+  options: ReviewSourceSyncOptions = {},
+) {
+  const page = normalizeQueuePage(options.page);
+  const pageSize = normalizeQueuePageSize(options.pageSize);
+  const credentials = await getConnectedYotpoCredentials(shop);
+  if (!credentials) return { connected: false, imported: 0, provider: "yotpo" as const, page, pageSize };
+
+  const products = await loadShopifyProducts(admin).catch(() => [] as ShopifyProductSummary[]);
+  const importedReviews: Array<{ rawReview: unknown; fields: ReturnType<typeof reviewFields> }> = [];
+
+  const response = await callYotpoApi(`/v1/apps/${encodeURIComponent(credentials.storeId)}/reviews`, {
+    accessToken: credentials.accessToken,
+    searchParams: {
+      count: pageSize,
+      page,
+      deleted: false,
+    },
+  });
+  const reviews = reviewsFromResponse(response);
+  const totalCount = reviewCountFromResponse(response);
+  if (totalCount !== null) {
+    await db.yotpoConnection.updateMany({
+      where: { shop },
+      data: { reviewCount: totalCount },
+    });
+  }
+  importedReviews.push(
+    ...reviews
+      .map((rawReview) => ({ rawReview, fields: reviewFields(rawReview, "yotpo") }))
+      .filter((review) => Boolean(review.fields.id)),
+  );
+
+  let imported = 0;
+
+  for (const importedReview of importedReviews) {
+    const { fields, rawReview } = importedReview;
+    if (!fields.id) continue;
+    const externalReply = extractSourceReply(rawReview, "yotpo");
+    const product = findProductByTitle(products, fields.productTitle);
+    const productType = product?.productType || null;
+    const productTagsJson = compactTags(product?.tags);
+    const externalReplyData = externalReply?.present
+      ? {
+          draft: "",
+          confidence: 0,
+          aiModelId: null,
+          aiModelName: null,
+          aiProviderName: null,
+          aiProviderModel: null,
+          draftGeneratedAt: null,
+          draftEditedAt: null,
+          draftRevisionCount: 0,
+          humanRequired: false,
+          lastError: null,
+        }
+      : {};
+
+    const existing = await db.reviewDraft.findUnique({
+      where: {
+        shop_source_sourceReviewId: {
+          shop,
+          source: "yotpo",
+          sourceReviewId: fields.id,
+        },
+      },
+    });
+
+    if (existing) {
+      await db.reviewDraft.update({
+        where: { id: existing.id },
+        data: {
+          customerName: fields.customer,
+          customerInitials: fields.initials,
+          productTitle: fields.productTitle,
+          productType,
+          productTagsJson,
+          reviewBody: fields.reviewBody,
+          rating: fields.rating,
+          sourceCreatedAt: fields.sourceCreatedAt,
+          sourceReviewJson: compactJson(rawReview),
+          lastSyncedAt: new Date(),
+          ...externalReplyData,
+        },
+      });
+    } else {
+      await db.reviewDraft.create({
+        data: {
+          shop,
+          source: "yotpo",
+          sourceReviewId: fields.id,
+          customerName: fields.customer,
+          customerInitials: fields.initials,
+          productTitle: fields.productTitle,
+          productType,
+          productTagsJson,
+          reviewBody: fields.reviewBody,
+          rating: fields.rating,
+          sourceCreatedAt: fields.sourceCreatedAt,
+          sourceReviewJson: compactJson(rawReview),
+          draft: "",
+          confidence: 0,
+          humanRequired: false,
+          status: "pending",
+          lastSyncedAt: new Date(),
+        },
+      });
+      imported += 1;
+    }
+  }
+
+  const totalPages = pageCount(totalCount, pageSize);
+  return {
+    connected: true,
+    imported,
+    provider: "yotpo" as const,
+    page,
+    pageSize,
+    fetched: reviews.length,
+    totalCount,
+    totalPages,
+    hasNextPage: totalPages ? page < totalPages : reviews.length >= pageSize,
+  };
+}
+
+export async function syncReviewSourceReviews(
+  shop: string,
+  admin?: AdminGraphql,
+  options: ReviewSourceSyncOptions = {},
+) {
+  const connection = await getReviewSourceConnectionView(shop);
+  if (connection?.provider === "yotpo") return syncYotpoReviews(shop, admin, options);
+  return syncJudgeMeReviews(shop, admin, options);
 }
 
 function mapDraft(record: Awaited<ReturnType<typeof db.reviewDraft.findMany>>[number]) {
   const sourceReview = safeJsonParse(record.sourceReviewJson);
-  const judgeMeReply = extractJudgeMeSourceReply(sourceReview);
+  const sourceProviderName = reviewSourceName(record.source);
+  const sourceReply = extractSourceReply(sourceReview, record.source);
 
   return {
     id: record.id,
     source: record.source,
+    sourceProviderName,
     sourceReviewId: record.sourceReviewId,
     initials: record.customerInitials || initialsFromName(record.customerName || "Customer"),
     customer: record.customerName || "Customer",
@@ -1141,8 +1517,10 @@ function mapDraft(record: Awaited<ReturnType<typeof db.reviewDraft.findMany>>[nu
           model: record.aiProviderModel || "",
         }
       : null,
-    judgeMeReply,
-    hasJudgeMeReply: Boolean(judgeMeReply?.present),
+    sourceReply,
+    hasSourceReply: Boolean(sourceReply?.present),
+    judgeMeReply: sourceReply,
+    hasJudgeMeReply: Boolean(sourceReply?.present),
     lastError: record.lastError || "",
     status: record.status,
   };
@@ -1179,22 +1557,54 @@ async function loadQueueAiConfig(shop: string, appSettings: AppSettings) {
   };
 }
 
-export async function getQueueData(shop: string, settings?: AppSettings) {
+export async function getQueueData(
+  shop: string,
+  settings?: AppSettings,
+  source?: ReviewSourceProvider | null,
+  options: {
+    page?: number | string | null;
+    pageSize?: number | string | null;
+    totalCount?: number | null;
+    hasNextPage?: boolean | null;
+  } = {},
+) {
   const appSettings = settings ?? (await loadAppSettings(shop));
-  const reviewRecords = await db.reviewDraft.findMany({
-    where: { shop, status: { in: ["pending", "skipped", "sent"] } },
-    orderBy: [{ sourceCreatedAt: "desc" }, { createdAt: "desc" }],
-  });
+  const page = normalizeQueuePage(options.page);
+  const pageSize = normalizeQueuePageSize(options.pageSize);
+  const where = reviewRecordWhere(shop, source);
+  const [reviewRecords, cachedRecordCount] = await Promise.all([
+    db.reviewDraft.findMany({
+      where,
+      orderBy: REVIEW_RECORD_ORDER,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    }),
+    db.reviewDraft.count({ where }),
+  ]);
   const reviews = reviewRecords.map(mapDraft);
   const pendingReviews = reviews.filter((review) => review.status === "pending");
   const generatedPendingReviews = pendingReviews.filter((review) => review.draftGenerated);
-  const judgeMeRepliedReviews = pendingReviews.filter((review) => review.hasJudgeMeReply);
+  const sourceRepliedReviews = pendingReviews.filter((review) => review.hasSourceReply);
   const products = Array.from(new Set(reviews.map((review) => review.product))).sort();
+  const knownTotalPages = pageCount(options.totalCount, pageSize);
+  const hasNextPage = knownTotalPages
+    ? page < knownTotalPages
+    : options.hasNextPage ?? reviewRecords.length >= pageSize;
 
   return {
     reviews,
     products,
     settings: appSettings,
+    pagination: {
+      currentPage: page,
+      pageSize,
+      totalCount: options.totalCount ?? null,
+      totalPages: knownTotalPages,
+      hasPreviousPage: page > 1,
+      hasNextPage,
+      cachedRecordCount,
+      visibleCount: reviewRecords.length,
+    },
     stats: {
       pending: reviewRecords.filter((record) => record.status === "pending").length,
       sentToday: reviewRecords.filter((record) =>
@@ -1202,8 +1612,9 @@ export async function getQueueData(shop: string, settings?: AppSettings) {
       ).length,
       sent: reviewRecords.filter((record) => record.status === "sent").length,
       skipped: reviewRecords.filter((record) => record.status === "skipped").length,
-      judgeMeReplied: judgeMeRepliedReviews.length,
-      ungenerated: pendingReviews.filter((review) => !review.draftGenerated && !review.hasJudgeMeReply).length,
+      sourceReplied: sourceRepliedReviews.length,
+      judgeMeReplied: sourceRepliedReviews.length,
+      ungenerated: pendingReviews.filter((review) => !review.draftGenerated && !review.hasSourceReply).length,
       highConfidence: generatedPendingReviews.filter((review) =>
         review.confidence >= appSettings.highConfidenceThreshold,
       ).length,
@@ -1214,26 +1625,65 @@ export async function getQueueData(shop: string, settings?: AppSettings) {
 
 export async function loadReviewsPageData(
   shop: string,
-  options: { sync?: boolean; admin?: AdminGraphql } = {},
+  options: {
+    sync?: boolean;
+    forceSync?: boolean;
+    admin?: AdminGraphql;
+    page?: number | string | null;
+    pageSize?: number | string | null;
+  } = {},
 ) {
+  const page = normalizeQueuePage(options.page);
+  const pageSize = normalizeQueuePageSize(options.pageSize);
   const appSettings = await loadAppSettings(shop);
   await cleanupExpiredReviewHistory(shop, appSettings);
-  let connection = await db.judgeMeConnection.findUnique({ where: { shop } });
-  let syncResult: Awaited<ReturnType<typeof syncJudgeMeReviews>> | null = null;
+  let connection = await getReviewSourceConnectionView(shop);
+  let syncResult: Awaited<ReturnType<typeof syncReviewSourceReviews>> | null = null;
   let syncError: unknown = null;
 
   if (options.sync && connection?.status === "connected") {
     try {
-      syncResult = await syncJudgeMeReviews(shop, options.admin);
+      const connectionTotalCount = typeof connection.reviewCount === "number"
+        ? connection.reviewCount
+        : null;
+      const knownTotalPages = pageCount(connectionTotalCount, pageSize);
+      const cached = options.forceSync
+        ? false
+        : await cachedReviewSourcePage(shop, connection.provider, page, pageSize, knownTotalPages);
+
+      syncResult = cached
+        ? {
+            connected: true,
+            imported: 0,
+            provider: connection.provider,
+            page,
+            pageSize,
+            fetched: 0,
+            totalCount: connectionTotalCount,
+            totalPages: knownTotalPages,
+            hasNextPage: knownTotalPages ? page < knownTotalPages : true,
+          }
+        : await syncReviewSourceReviews(shop, options.admin, { page, pageSize });
     } catch (error) {
       syncError = error;
     }
-    connection = await db.judgeMeConnection.findUnique({ where: { shop } });
+    connection = await getReviewSourceConnectionView(shop);
   }
+
+  const connectionTotalCount = connection?.status === "connected" && typeof connection.reviewCount === "number"
+    ? connection.reviewCount
+    : null;
+  const totalCount = typeof syncResult?.totalCount === "number"
+    ? syncResult.totalCount
+    : connection?.provider === "yotpo" && connectionTotalCount !== null && connectionTotalCount <= pageSize
+      ? null
+      : connectionTotalCount;
 
   return {
     connected: Boolean(connection && connection.status === "connected"),
     connectionStatus: connection?.status ?? "not_connected",
+    connectionProvider: connection?.provider ?? null,
+    connectionProviderName: connection?.providerName ?? null,
     aiConfig: await loadQueueAiConfig(shop, appSettings),
     credits: await getCreditOverview(shop),
     syncResult,
@@ -1241,10 +1691,23 @@ export async function loadReviewsPageData(
       syncError instanceof Error
         ? {
             message: syncError.message,
-            details: syncError instanceof JudgeMeApiError ? syncError.details : undefined,
+            details:
+              syncError instanceof JudgeMeApiError || syncError instanceof YotpoApiError
+                ? syncError.details
+                : undefined,
           }
         : null,
-    ...(await getQueueData(shop, appSettings)),
+    ...(await getQueueData(
+      shop,
+      appSettings,
+      connection?.status === "connected" ? connection.provider : null,
+      {
+        page,
+        pageSize,
+        totalCount,
+        hasNextPage: syncResult && "hasNextPage" in syncResult ? syncResult.hasNextPage : null,
+      },
+    )),
   };
 }
 
@@ -1450,7 +1913,7 @@ type DraftGenerationResult = {
 export async function generateDrafts(shop: string, ids: string[], admin?: AdminGraphql) {
   const records = (await db.reviewDraft.findMany({
     where: { shop, id: { in: ids }, status: "pending", draft: "" },
-  })).filter((record) => !extractJudgeMeSourceReply(safeJsonParse(record.sourceReviewJson))?.present);
+  })).filter((record) => !extractSourceReplyForRecord(record)?.present);
   const [products, brandVoice, appSettings] = await Promise.all([
     loadShopifyProducts(admin).catch(() => [] as ShopifyProductSummary[]),
     loadBrandVoiceForDrafts(shop),
@@ -1557,7 +2020,7 @@ export async function generateDrafts(shop: string, ids: string[], admin?: AdminG
 export async function regenerateDrafts(shop: string, ids: string[], nudge?: string, admin?: AdminGraphql) {
   const records = (await db.reviewDraft.findMany({
     where: { shop, id: { in: ids }, status: "pending", draft: { not: "" } },
-  })).filter((record) => !extractJudgeMeSourceReply(safeJsonParse(record.sourceReviewJson))?.present);
+  })).filter((record) => !extractSourceReplyForRecord(record)?.present);
   const [products, brandVoice, appSettings] = await Promise.all([
     loadShopifyProducts(admin).catch(() => [] as ShopifyProductSummary[]),
     loadBrandVoiceForDrafts(shop),
@@ -1837,15 +2300,16 @@ export async function restoreDrafts(shop: string, ids: string[]) {
   return result.count;
 }
 
-async function markDraftAsExternalJudgeMeReply(
+async function markDraftAsExternalSourceReply(
   record: Awaited<ReturnType<typeof db.reviewDraft.findMany>>[number],
   message: string,
 ) {
   const sourceReview = safeJsonParse(record.sourceReviewJson);
+  const providerName = reviewSourceName(record.source);
   await db.reviewDraft.update({
     where: { id: record.id },
     data: {
-      sourceReviewJson: compactJson(markRawReviewAsAlreadyReplied(sourceReview, message)),
+      sourceReviewJson: compactJson(markRawReviewAsAlreadyReplied(sourceReview, message, providerName)),
       draft: "",
       confidence: 0,
       aiModelId: null,
@@ -1862,42 +2326,70 @@ async function markDraftAsExternalJudgeMeReply(
 }
 
 export async function approveAndSendDrafts(shop: string, ids: string[]) {
-  const credentials = await getConnectedJudgeMeCredentials(shop);
-  if (!credentials) {
-    throw new JudgeMeApiError("Connect Judge.me before approving replies.");
-  }
-
   const appSettings = await loadAppSettings(shop);
   const records = await db.reviewDraft.findMany({
     where: { shop, id: { in: ids }, status: "pending", draft: { not: "" } },
   });
-  const errors: Array<{ id: string; reviewId: string; message: string }> = [];
-  const alreadyReplied: Array<{ id: string; reviewId: string; message: string }> = [];
+  const errors: Array<{ id: string; reviewId: string; message: string; providerName: string }> = [];
+  const alreadyReplied: Array<{ id: string; reviewId: string; message: string; providerName: string }> = [];
+  let judgeMeCredentials: Awaited<ReturnType<typeof getConnectedJudgeMeCredentials>> | undefined;
+  let yotpoCredentials: Awaited<ReturnType<typeof getConnectedYotpoCredentials>> | undefined;
   let sent = 0;
 
+  async function requireJudgeMeCredentials() {
+    if (judgeMeCredentials === undefined) {
+      judgeMeCredentials = await getConnectedJudgeMeCredentials(shop);
+    }
+    if (!judgeMeCredentials) throw new JudgeMeApiError("Connect Judge.me before approving replies.");
+    return judgeMeCredentials;
+  }
+
+  async function requireYotpoCredentials() {
+    if (yotpoCredentials === undefined) {
+      yotpoCredentials = await getConnectedYotpoCredentials(shop);
+    }
+    if (!yotpoCredentials) throw new YotpoApiError("Connect Yotpo before approving replies.");
+    return yotpoCredentials;
+  }
+
   for (const record of records) {
+    const source = normalizeReviewSource(record.source);
+    const providerName = reviewSourceName(source);
+
     try {
-      const sourceReply = extractJudgeMeSourceReply(safeJsonParse(record.sourceReviewJson));
+      const sourceReply = extractSourceReplyForRecord(record);
       if (sourceReply?.present) {
         const message = sourceReply.contentAvailable
-          ? "Judge.me already has a public reply for this review. ReplyPulse AI: Review Replies did not send or change anything."
-          : "Judge.me already has an external reply for this review, but ReplyPulse AI: Review Replies could not import the reply text.";
-        alreadyReplied.push({ id: record.id, reviewId: record.sourceReviewId, message });
-        await markDraftAsExternalJudgeMeReply(record, message);
+          ? `${providerName} already has a public reply for this review. ReplyPulse did not send or change anything.`
+          : `${providerName} already has an external reply for this review, but ReplyPulse could not import the reply text.`;
+        alreadyReplied.push({ id: record.id, reviewId: record.sourceReviewId, message, providerName });
+        await markDraftAsExternalSourceReply(record, message);
         continue;
       }
 
-      const numericReviewId = Number(record.sourceReviewId);
-      await callJudgeMeApi("/replies", {
-        method: "POST",
-        apiToken: credentials.apiToken,
-        shopDomain: credentials.shopDomain,
-        body: {
-          review_id: Number.isNaN(numericReviewId) ? record.sourceReviewId : numericReviewId,
-          send_reply_email: appSettings.sendReplyEmail,
-          reply: { content: record.draft },
-        },
-      });
+      if (source === "yotpo") {
+        const credentials = await requireYotpoCredentials();
+        await commentOnYotpoReview({
+          storeId: credentials.storeId,
+          accessToken: credentials.accessToken,
+          reviewId: record.sourceReviewId,
+          content: record.draft,
+          publicComment: true,
+        });
+      } else {
+        const credentials = await requireJudgeMeCredentials();
+        const numericReviewId = Number(record.sourceReviewId);
+        await callJudgeMeApi("/replies", {
+          method: "POST",
+          apiToken: credentials.apiToken,
+          shopDomain: credentials.shopDomain,
+          body: {
+            review_id: Number.isNaN(numericReviewId) ? record.sourceReviewId : numericReviewId,
+            send_reply_email: appSettings.sendReplyEmail,
+            reply: { content: record.draft },
+          },
+        });
+      }
 
       await db.reviewDraft.update({
         where: { id: record.id },
@@ -1909,13 +2401,17 @@ export async function approveAndSendDrafts(shop: string, ids: string[]) {
       });
       sent += 1;
     } catch (error) {
-      if (judgeMeAlreadyRepliedMessage(error)) {
-        const message = "Judge.me rejected this review because it already has a reply. ReplyPulse AI: Review Replies did not send or change anything.";
-        alreadyReplied.push({ id: record.id, reviewId: record.sourceReviewId, message });
-        await markDraftAsExternalJudgeMeReply(record, message);
+      const isAlreadyReplied = source === "yotpo"
+        ? yotpoAlreadyCommentedMessage(error)
+        : judgeMeAlreadyRepliedMessage(error);
+
+      if (isAlreadyReplied) {
+        const message = `${providerName} rejected this review because it already has a reply. ReplyPulse did not send or change anything.`;
+        alreadyReplied.push({ id: record.id, reviewId: record.sourceReviewId, message, providerName });
+        await markDraftAsExternalSourceReply(record, message);
       } else {
-        const message = error instanceof Error ? error.message : "Unknown Judge.me send error";
-        errors.push({ id: record.id, reviewId: record.sourceReviewId, message });
+        const message = error instanceof Error ? error.message : `Unknown ${providerName} send error`;
+        errors.push({ id: record.id, reviewId: record.sourceReviewId, message, providerName });
         await db.reviewDraft.update({
           where: { id: record.id },
           data: { lastError: message },

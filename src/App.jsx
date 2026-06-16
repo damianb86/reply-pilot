@@ -85,10 +85,10 @@ export default function App() {
               <div className="app-mark-badge">
                 <Icon source={ChatIcon} tone="base" />
               </div>
-              <Text as="span" variant="headingLg">ReplyPulse AI: Review Replies</Text>
+              <Text as="span" variant="headingLg">Reply Pulse AI: Review Replies</Text>
             </div>
 
-            <nav className="sidebar-nav" aria-label="ReplyPulse AI: Review Replies sections">
+            <nav className="sidebar-nav" aria-label="ReplyPulse sections">
               {navigationItems.map((item) => {
                 const isActive = item.key === currentPage;
                 return (
@@ -112,7 +112,7 @@ export default function App() {
                   <InlineStack gap="200" blockAlign="center">
                     <Badge tone="attention">Setup</Badge>
                     <Text as="p" variant="bodyMd" fontWeight="semibold">
-                      Connect Judge.me
+                      Connect a review source
                     </Text>
                   </InlineStack>
                   <Text as="p" variant="bodySm" tone="subdued">

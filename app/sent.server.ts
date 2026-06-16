@@ -1,5 +1,6 @@
 import db from "./db.server";
-import { syncJudgeMeReviews } from "./reviews.server";
+import { getReviewSourceConnectionView } from "./review-source.server";
+import { syncReviewSourceReviews } from "./reviews.server";
 import {
   cleanupExpiredReviewHistory,
   isSameTimeZoneDay,
@@ -8,7 +9,7 @@ import {
   timeZoneDayKey,
 } from "./settings.server";
 
-type AdminGraphql = Parameters<typeof syncJudgeMeReviews>[1];
+type AdminGraphql = Parameters<typeof syncReviewSourceReviews>[1];
 type SentRecord = Awaited<ReturnType<typeof db.reviewDraft.findMany>>[number];
 
 function readStringListJson(value?: string | null) {
@@ -117,14 +118,16 @@ function buildWeekBars(records: SentRecord[], timeZone: string) {
 export async function loadSentPageData(shop: string) {
   const settings = await loadAppSettings(shop);
   await cleanupExpiredReviewHistory(shop, settings);
+  const connection = await getReviewSourceConnectionView(shop);
+  const sourceWhere = connection?.status === "connected" ? { source: connection.provider } : {};
   const last7Keys = new Set(recentTimeZoneDays(7, settings.timezone).map((day) => day.key));
   const [records, totalSent] = await Promise.all([
     db.reviewDraft.findMany({
-      where: { shop, status: "sent" },
+      where: { shop, status: "sent", ...sourceWhere },
       orderBy: [{ sentAt: "desc" }, { updatedAt: "desc" }],
       take: 500,
     }),
-    db.reviewDraft.count({ where: { shop, status: "sent" } }),
+    db.reviewDraft.count({ where: { shop, status: "sent", ...sourceWhere } }),
   ]);
 
   const sentReplies = records.map(mapSentReply);
@@ -147,6 +150,8 @@ export async function loadSentPageData(shop: string) {
     sentReplies,
     products,
     settings,
+    connectionProvider: connection?.provider ?? null,
+    connectionProviderName: connection?.providerName ?? null,
     weekBars: buildWeekBars(records, settings.timezone),
     stats: {
       total: records.length,
@@ -164,7 +169,7 @@ export async function loadSentPageData(shop: string) {
 }
 
 export async function refreshSentPageData(shop: string, admin?: AdminGraphql) {
-  const syncResult = await syncJudgeMeReviews(shop, admin);
+  const syncResult = await syncReviewSourceReviews(shop, admin);
   return {
     syncResult,
     ...(await loadSentPageData(shop)),

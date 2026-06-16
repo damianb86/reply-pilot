@@ -10,10 +10,10 @@ ENV NODE_ENV=production
 ENV APP_ENV=production
 
 COPY package.json package-lock.json* ./
+COPY prisma ./prisma
 
 RUN --mount=type=cache,target=/root/.npm npm ci --omit=dev
 
-COPY prisma ./prisma
 COPY scripts ./scripts
 COPY build ./build
 

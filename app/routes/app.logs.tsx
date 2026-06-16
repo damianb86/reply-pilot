@@ -1,7 +1,7 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import LogsPage from "../../src/pages/LogsPage";
 import { loadSentPageData, refreshSentPageData } from "../sent.server";
-import { serializeJudgeMeError } from "../judgeme.server";
+import { serializeReviewSourceError } from "../review-source.server";
 import { authenticate } from "../shopify.server";
 
 export async function loader({ request }: LoaderFunctionArgs) {
@@ -24,7 +24,7 @@ export async function action({ request }: ActionFunctionArgs) {
         ...data,
       };
     } catch (error) {
-      const serialized = serializeJudgeMeError(error);
+      const serialized = serializeReviewSourceError(error);
       return {
         ok: false,
         intent,

@@ -23,6 +23,7 @@ export async function action({ request }: ActionFunctionArgs) {
         reviews,
         brandVoice,
         judgeMeConnections,
+        yotpoConnections,
         appSettings,
         creditAccounts,
         creditLedgerEntries,
@@ -32,6 +33,7 @@ export async function action({ request }: ActionFunctionArgs) {
         db.reviewDraft.count({ where: { shop: session.shop } }),
         db.brandVoiceSetting.count({ where: { shop: session.shop } }),
         db.judgeMeConnection.count({ where: { shop: session.shop } }),
+        db.yotpoConnection.count({ where: { shop: session.shop } }),
         db.appSetting.count({ where: { shop: session.shop } }),
         db.creditAccount.count({ where: { shop: session.shop } }),
         db.creditLedgerEntry.count({ where: { shop: session.shop } }),
@@ -50,6 +52,7 @@ export async function action({ request }: ActionFunctionArgs) {
           `- Review records and AI drafts: ${reviews}`,
           `- Brand Voice settings: ${brandVoice}`,
           `- Judge.me connections: ${judgeMeConnections}`,
+          `- Yotpo connections: ${yotpoConnections}`,
           `- App settings: ${appSettings}`,
           `- Credit accounts: ${creditAccounts}`,
           `- Credit ledger entries: ${creditLedgerEntries}`,
@@ -66,6 +69,7 @@ export async function action({ request }: ActionFunctionArgs) {
           reviews,
           brandVoice,
           judgeMeConnections,
+          yotpoConnections,
           appSettings,
           creditAccounts,
           creditLedgerEntries,
@@ -90,6 +94,7 @@ export async function action({ request }: ActionFunctionArgs) {
         db.reviewDraft.deleteMany({ where: { shop: session.shop } }),
         db.brandVoiceSetting.deleteMany({ where: { shop: session.shop } }),
         db.judgeMeConnection.deleteMany({ where: { shop: session.shop } }),
+        db.yotpoConnection.deleteMany({ where: { shop: session.shop } }),
         db.appSetting.deleteMany({ where: { shop: session.shop } }),
         db.creditLedgerEntry.deleteMany({ where: { shop: session.shop } }),
         db.creditPurchase.deleteMany({ where: { shop: session.shop } }),
@@ -105,15 +110,15 @@ export async function action({ request }: ActionFunctionArgs) {
         message: [
           `Shop: ${session.shop}`,
           "",
-          "The merchant requested deletion of all ReplyPulse AI: Review Replies app data.",
-          "Deleted: review records, AI drafts, Brand Voice settings, Judge.me connection, app settings, credit records, contact requests, and Shopify sessions.",
+          "The merchant requested deletion of all ReplyPulse app data.",
+          "Deleted: review records, AI drafts, Brand Voice settings, review provider connections, app settings, credit records, contact requests, and Shopify sessions.",
         ].join("\n"),
       });
 
       return {
         ok: true,
         intent,
-        message: "All ReplyPulse AI: Review Replies app data has been permanently deleted.",
+        message: "All ReplyPulse app data has been permanently deleted.",
       };
     } catch (error) {
       console.error("[app.help.privacy-data-delete]", error);

@@ -1,29 +1,17 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
 client_id = "54e8e57d7f234f7651a96f600f2bb3d2"
-name = "ReplyPulse AI: Review Replies"
-application_url = "https://qorve-3.duckdns.org"
+name = "Reply Pulse AI: Review Replies"
+application_url = "https://app-reply-pulse.zuam.dev"
 embedded = true
 handle = "reply-pilot"
 
 [build]
 automatically_update_urls_on_dev = true
-dev_store_url = "qorve-dev.myshopify.com"
+dev_store_url = "damian-xdcxxupp.myshopify.com"
 
 [webhooks]
 api_version = "2026-04"
-
-  [[webhooks.subscriptions]]
-  compliance_topics = [ "customers/data_request" ]
-  uri = "https://qorve-3.duckdns.org/webhooks/customers/data_request"
-
-  [[webhooks.subscriptions]]
-  compliance_topics = [ "customers/redact" ]
-  uri = "https://qorve-3.duckdns.org/webhooks/customers/redact"
-
-  [[webhooks.subscriptions]]
-  compliance_topics = [ "shop/redact" ]
-  uri = "https://qorve-3.duckdns.org/webhooks/shop/redact"
 
   [[webhooks.subscriptions]]
   uri = "/webhooks/app/scopes_update"
@@ -33,10 +21,22 @@ api_version = "2026-04"
   uri = "/webhooks/app/uninstalled"
   topics = [ "app/uninstalled" ]
 
+  [[webhooks.subscriptions]]
+  uri = "/webhooks/customers/data_request"
+  compliance_topics = [ "customers/data_request" ]
+
+  [[webhooks.subscriptions]]
+  uri = "/webhooks/customers/redact"
+  compliance_topics = [ "customers/redact" ]
+
+  [[webhooks.subscriptions]]
+  uri = "/webhooks/shop/redact"
+  compliance_topics = [ "shop/redact" ]
+
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
 scopes = "read_products"
 use_legacy_install_flow = false
 
 [auth]
-redirect_urls = [ "https://qorve-3.duckdns.org/auth/callback" ]
+redirect_urls = [ "https://app-reply-pulse.zuam.dev/auth/callback" ]

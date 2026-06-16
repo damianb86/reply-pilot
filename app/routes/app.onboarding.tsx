@@ -3,7 +3,8 @@ import OnboardingPage from "../../src/pages/OnboardingPage";
 import { loadBrandVoicePageData, saveBrandVoiceSettings } from "../brand-voice.server";
 import { productDescriptionCreditMultiplier } from "../credits.server";
 import db from "../db.server";
-import { getJudgeMeConnectionView, isJudgeMeTestDomainFieldEnabled } from "../judgeme.server";
+import { isJudgeMeTestDomainFieldEnabled } from "../judgeme.server";
+import { getReviewSourceConnectionView } from "../review-source.server";
 import { loadAppSettings, saveAppSettings } from "../settings.server";
 import { authenticate } from "../shopify.server";
 import { loadShopifyProducts } from "../shopify-products.server";
@@ -54,7 +55,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const [settings, brandVoice, connection, existingBrandVoice, products] = await Promise.all([
     loadAppSettings(session.shop),
     loadBrandVoicePageData(session.shop),
-    getJudgeMeConnectionView(session.shop),
+    getReviewSourceConnectionView(session.shop),
     db.brandVoiceSetting.findUnique({
       where: { shop: session.shop },
       select: { selectedModel: true, personality: true, previewProductId: true },
@@ -72,6 +73,10 @@ export async function loader({ request }: LoaderFunctionArgs) {
     connection,
     judgeMeApiSettingsUrl: "https://judge.me/settings?jump_to=judge.me+api",
     judgeMeApiDocsUrl: "https://judge.me/help/en/articles/8409180-judge-me-api",
+    yotpoApiCredentialsUrl: "https://app.yotpo.com/account_settings/general",
+    yotpoCredentialGuideUrl: "https://support.yotpo.com/docs/finding-your-yotpo-app-key-and-secret-key-3",
+    yotpoApiCredentialsDocsUrl: "https://apidocs.yotpo.com/reference/finding-your-app-key-and-api-secret",
+    yotpoAuthenticationDocsUrl: "https://apidocs.yotpo.com/reference/yotpo-authentication",
     isDevelopment: appEnv !== "production",
     showJudgeMeTestDomainField: isJudgeMeTestDomainFieldEnabled(),
     appEnv,

@@ -69,7 +69,7 @@ function CustomerCell({review}) {
   );
 }
 
-function QueueEmptyState({connected, connectUrl, onRefresh, refreshing}) {
+function QueueEmptyState({connected, connectUrl, onRefresh, refreshing, providerName = 'review source'}) {
   return (
     <div className="rp-queue-empty">
       <span className="rp-empty-mark is-blue">
@@ -79,8 +79,8 @@ function QueueEmptyState({connected, connectUrl, onRefresh, refreshing}) {
         <Text as="h2" variant="headingLg" alignment="center">No messages to show</Text>
         <Text as="p" variant="bodyMd" tone="subdued" alignment="center">
           {connected
-            ? 'When Judge.me has reviews ready for attention, ReplyPulse AI: Review Replies will import them here so you can review existing replies and generate new drafts.'
-            : 'Connect Judge.me from Connect to import reviews and start replying from Reviews.'}
+            ? `When ${providerName} has reviews ready for attention, ReplyPulse will import them here so you can review existing replies and generate new drafts.`
+            : `Connect ${providerName} from Connect to import reviews and start replying from Reviews.`}
         </Text>
       </BlockStack>
       <InlineStack gap="200" align="center">
@@ -103,7 +103,7 @@ function AiActionButton({children, className = '', icon = MagicIcon, ...buttonPr
   );
 }
 
-function ResultBanner({result, syncError}) {
+function ResultBanner({result, syncError, providerName = 'review source'}) {
   if (result?.message && result.ok === false) {
     return (
       <Banner tone={result.ok ? 'success' : 'critical'}>
@@ -121,7 +121,7 @@ function ResultBanner({result, syncError}) {
     return (
       <Banner tone="critical">
         <BlockStack gap="150">
-          <Text as="p" variant="bodyMd">Could not sync Judge.me reviews.</Text>
+          <Text as="p" variant="bodyMd">Could not sync {providerName} reviews.</Text>
           <pre className="rp-json-preview is-error">{JSON.stringify(syncError, null, 2)}</pre>
         </BlockStack>
       </Banner>
@@ -151,8 +151,36 @@ function hasDraft(review) {
   return Boolean(review?.draftGenerated ?? review?.draft?.trim());
 }
 
+function sourceReply(review) {
+  return review?.sourceReply || review?.judgeMeReply || null;
+}
+
+function hasSourceReply(review) {
+  return Boolean(review?.hasSourceReply || sourceReply(review)?.present || review?.hasJudgeMeReply);
+}
+
 function hasJudgeMeReply(review) {
-  return Boolean(review?.hasJudgeMeReply || review?.judgeMeReply?.present);
+  return hasSourceReply(review);
+}
+
+function providerNameForReview(pageData, review) {
+  return review?.sourceProviderName || pageData?.connectionProviderName || 'Review source';
+}
+
+function paginationPageItems(currentPage, totalPages) {
+  if (!totalPages) return [];
+  if (totalPages <= 7) return Array.from({length: totalPages}, (_, index) => index + 1);
+
+  const pages = new Set([1, totalPages, currentPage]);
+  for (let page = Math.max(2, currentPage - 2); page <= Math.min(totalPages - 1, currentPage + 2); page += 1) {
+    pages.add(page);
+  }
+
+  const sorted = Array.from(pages).sort((a, b) => a - b);
+  return sorted.flatMap((page, index) => {
+    const previous = sorted[index - 1];
+    return previous && page - previous > 1 ? [`gap-${previous}-${page}`, page] : [page];
+  });
 }
 
 function formatReplyDate(value) {
@@ -273,7 +301,21 @@ function ReviewsContent() {
   const [showInitialRefreshLoading, setShowInitialRefreshLoading] = useState(Boolean(loaderData.connected && !hasCachedReviews));
   const [latestPageData, setLatestPageData] = useState(null);
   const pageData = latestPageData ?? loaderData;
+  const connectionProviderName = pageData.connectionProviderName || 'review source';
   const reviews = useMemo(() => pageData.reviews ?? [], [pageData.reviews]);
+  const pagination = pageData.pagination ?? {
+    currentPage: 1,
+    pageSize: 10,
+    totalCount: null,
+    totalPages: null,
+    hasPreviousPage: false,
+    hasNextPage: false,
+    visibleCount: reviews.length,
+  };
+  const currentPage = Number(pagination.currentPage || 1);
+  const pageSize = Number(pagination.pageSize || 10);
+  const totalPages = Number(pagination.totalPages || 0) || null;
+  const pageItems = useMemo(() => paginationPageItems(currentPage, totalPages), [currentPage, totalPages]);
   const stats = pageData.stats ?? {pending: 0, sentToday: 0, sent: 0, skipped: 0, ungenerated: 0, judgeMeReplied: 0, highConfidence: 0, needsHuman: 0};
   const queueSettings = pageData.settings ?? {};
   const highConfidenceThreshold = queueSettings.highConfidenceThreshold ?? 85;
@@ -291,39 +333,26 @@ function ReviewsContent() {
   const [productFilter, setProductFilter] = useState('all');
   const [highConfidenceOnly, setHighConfidenceOnly] = useState(false);
   const [needsHumanOnly, setNeedsHumanOnly] = useState(false);
-  const [dateRangeFilter, setDateRangeFilter] = useState(queueSettings.defaultQueueRange || '7-days');
   const [showSkipped, setShowSkipped] = useState(Boolean(queueSettings.showSkippedByDefault));
   const [showSent, setShowSent] = useState(Boolean(queueSettings.showSentByDefault));
-  const [sortNewest, setSortNewest] = useState((queueSettings.defaultQueueSort || 'newest') !== 'oldest');
   const [isEditing, setIsEditing] = useState(false);
   const [draftValue, setDraftValue] = useState('');
   const [showDraftAdjuster, setShowDraftAdjuster] = useState(false);
   const [draftInstruction, setDraftInstruction] = useState('');
 
   const filteredReviews = useMemo(() => {
-    const now = Date.now();
-
     return [...reviews]
       .filter((review) => showSkipped || review.status !== 'skipped')
       .filter((review) => showSent || review.status !== 'sent')
       .filter((review) => starFilter === 'all' || String(review.rating) === starFilter)
       .filter((review) => productFilter === 'all' || review.product === productFilter)
       .filter((review) => !highConfidenceOnly || (hasDraft(review) && review.confidence >= highConfidenceThreshold))
-      .filter((review) => !needsHumanOnly || (hasDraft(review) && review.human))
-      .filter((review) => {
-        if (dateRangeFilter === 'all') return true;
-        const rangeDays = dateRangeFilter === '30-days' ? 30 : 7;
-        const date = parseDate(review.createdAt);
-        return !date || now - date.getTime() <= rangeDays * 24 * 60 * 60 * 1000;
-      })
-      .sort((a, b) => {
-        const aTime = parseDate(a.createdAt)?.getTime() ?? 0;
-        const bTime = parseDate(b.createdAt)?.getTime() ?? 0;
-        return sortNewest ? bTime - aTime : aTime - bTime;
-      });
-  }, [reviews, showSkipped, showSent, starFilter, productFilter, highConfidenceOnly, needsHumanOnly, dateRangeFilter, sortNewest, highConfidenceThreshold]);
+      .filter((review) => !needsHumanOnly || (hasDraft(review) && review.human));
+  }, [reviews, showSkipped, showSent, starFilter, productFilter, highConfidenceOnly, needsHumanOnly, highConfidenceThreshold]);
 
   const activeReview = filteredReviews.find((review) => review.id === activeReviewId) ?? filteredReviews[0] ?? null;
+  const activeProviderName = providerNameForReview(pageData, activeReview);
+  const activeSourceReply = sourceReply(activeReview);
   const visibleIds = filteredReviews.map((review) => review.id);
   const activeHasDraft = hasDraft(activeReview);
   const activeHasJudgeMeReply = hasJudgeMeReply(activeReview);
@@ -427,8 +456,11 @@ function ReviewsContent() {
     formData.set('intent', 'sync');
     formData.set('ids', '[]');
     formData.set('source', 'initial-load');
+    formData.set('page', String(currentPage));
+    formData.set('pageSize', String(pageSize));
+    formData.set('force', 'true');
     syncFetcher.submit(formData, {method: 'post'});
-  }, [hasCachedReviews, loaderData.connected, syncFetcher]);
+  }, [currentPage, hasCachedReviews, loaderData.connected, pageSize, syncFetcher]);
 
   useEffect(() => {
     if (
@@ -453,10 +485,14 @@ function ReviewsContent() {
   }, [actionFetcher.data]);
 
   useEffect(() => {
-    if (!activeReview && filteredReviews[0]) {
+    if (filteredReviews[0] && !filteredReviews.some((review) => review.id === activeReviewId)) {
       setActiveReviewId(filteredReviews[0].id);
     }
-  }, [activeReview, filteredReviews]);
+  }, [activeReviewId, filteredReviews]);
+
+  useEffect(() => {
+    setSelectedIds([]);
+  }, [currentPage, pageSize]);
 
   useEffect(() => {
     setDraftValue(activeReview?.draft ?? '');
@@ -527,6 +563,8 @@ function ReviewsContent() {
     const formData = new FormData();
     formData.set('intent', intent);
     formData.set('ids', JSON.stringify(ids));
+    formData.set('page', String(currentPage));
+    formData.set('pageSize', String(pageSize));
 
     Object.entries(extra).forEach(([key, value]) => {
       formData.set(key, value);
@@ -587,6 +625,35 @@ function ReviewsContent() {
     const formData = new FormData();
     formData.set('intent', 'sync');
     formData.set('ids', '[]');
+    formData.set('page', String(currentPage));
+    formData.set('pageSize', String(pageSize));
+    formData.set('force', 'true');
+    syncFetcher.submit(formData, {method: 'post'});
+  }
+
+  function handlePageChange(nextPage) {
+    const targetPage = Math.max(1, Number(nextPage || 1));
+    if (!pageData.connected || isSyncing || targetPage === currentPage) return;
+    const formData = new FormData();
+    formData.set('intent', 'sync');
+    formData.set('ids', '[]');
+    formData.set('source', 'page-navigation');
+    formData.set('page', String(targetPage));
+    formData.set('pageSize', String(pageSize));
+    formData.set('force', 'false');
+    syncFetcher.submit(formData, {method: 'post'});
+  }
+
+  function handlePageSizeChange(nextPageSize) {
+    const targetPageSize = Number(nextPageSize) >= 20 ? 20 : 10;
+    if (!pageData.connected || isSyncing || targetPageSize === pageSize) return;
+    const formData = new FormData();
+    formData.set('intent', 'sync');
+    formData.set('ids', '[]');
+    formData.set('source', 'page-navigation');
+    formData.set('page', '1');
+    formData.set('pageSize', String(targetPageSize));
+    formData.set('force', 'false');
     syncFetcher.submit(formData, {method: 'post'});
   }
 
@@ -597,6 +664,8 @@ function ReviewsContent() {
     formData.set('intent', 'update-draft');
     formData.set('id', activeReview.id);
     formData.set('draft', draftValue);
+    formData.set('page', String(currentPage));
+    formData.set('pageSize', String(pageSize));
     actionFetcher.submit(formData, {method: 'post'});
   }
 
@@ -608,6 +677,8 @@ function ReviewsContent() {
     formData.set('intent', 'revise-draft');
     formData.set('id', activeReview.id);
     formData.set('instruction', draftInstruction.trim().slice(0, 100));
+    formData.set('page', String(currentPage));
+    formData.set('pageSize', String(pageSize));
     actionFetcher.submit(formData, {method: 'post'});
   }
 
@@ -639,7 +710,7 @@ function ReviewsContent() {
             ) : review.status === 'sent' ? (
               <Badge tone="success">Sent</Badge>
             ) : null}
-            {hasJudgeMeReply(review) ? <Badge tone="success">Judge.me replied</Badge> : null}
+            {hasJudgeMeReply(review) ? <Badge tone="success">{providerNameForReview(pageData, review)} replied</Badge> : null}
             {!hasDraft(review) && !hasJudgeMeReply(review) ? (
               <Badge tone="info">Draft needed</Badge>
             ) : hasDraft(review) ? (
@@ -655,7 +726,7 @@ function ReviewsContent() {
           <ConfidenceMeter value={review.confidence} />
         ) : (
           <Text as="span" variant="bodySm" tone="subdued">
-            {hasJudgeMeReply(review) ? 'Judge.me reply' : 'Not generated'}
+            {hasJudgeMeReply(review) ? `${providerNameForReview(pageData, review)} reply` : 'Not generated'}
           </Text>
         )}
       </IndexTable.Cell>
@@ -682,7 +753,7 @@ function ReviewsContent() {
         </div>
       ) : null}
 
-      <ResultBanner result={actionResult} syncError={pageData.syncError} />
+      <ResultBanner result={actionResult} syncError={pageData.syncError} providerName={connectionProviderName} />
       {isBulkAiProcessing ? (
         <div className="rp-processing-overlay" role="status" aria-live="assertive">
           <div className="rp-processing-modal">
@@ -695,7 +766,7 @@ function ReviewsContent() {
                 {bulkProcessingVerb} {pendingIds.length} messages with {aiDisplayName}.
               </Text>
               <Text as="p" variant="bodySm" tone="subdued" alignment="center">
-                ReplyPulse AI: Review Replies is applying Brand Voice, product context, and review ratings. Keep this page open until it finishes.
+                ReplyPulse is applying Brand Voice, product context, and review ratings. Keep this page open until it finishes.
               </Text>
             </BlockStack>
             <div className="rp-processing-bar" aria-hidden="true">
@@ -718,7 +789,7 @@ function ReviewsContent() {
         <BlockStack gap="100">
           <Text as="h1" variant="heading2xl">Reviews</Text>
           <Text as="p" variant="bodyLg" tone="subdued">
-            Review approvals stay table-first for speed while existing Judge.me replies and AI drafts remain visible in the side panel.
+            Review approvals stay table-first for speed while existing source replies and AI drafts remain visible in the side panel.
           </Text>
         </BlockStack>
         <span className="rp-refresh-action">
@@ -745,7 +816,7 @@ function ReviewsContent() {
               <Badge tone={aiConfigured ? 'info' : 'critical'}>AI: {aiDisplayName}</Badge>
               <Badge tone={creditBalance < replyCreditCost ? 'critical' : 'info'}>{formatCreditAmount(creditBalance)} credits</Badge>
               {productDescriptionMultiplier > 1 ? <Badge tone="info">Product descriptions {productDescriptionMultiplier}x</Badge> : null}
-              <Badge>{pageData.connected ? 'Judge.me connected' : 'Source missing'}</Badge>
+              <Badge>{pageData.connected ? `${pageData.connectionProviderName || 'Review source'} connected` : 'Source missing'}</Badge>
               <Badge tone={pageData.connected ? 'success' : 'attention'}>{pageData.connected ? 'Ready' : 'Setup needed'}</Badge>
             </InlineStack>
           </InlineStack>
@@ -784,19 +855,6 @@ function ReviewsContent() {
               <Button pressed={needsHumanOnly} icon={AlertTriangleIcon} onClick={() => setNeedsHumanOnly((value) => !value)}>
                 Needs human
               </Button>
-              <div className="rp-filter-select">
-                <Select
-                  label="Date range"
-                  labelHidden
-                  options={[
-                    {label: 'Last 7 days', value: '7-days'},
-                    {label: 'Last 30 days', value: '30-days'},
-                    {label: 'All time', value: 'all'},
-                  ]}
-                  value={dateRangeFilter}
-                  onChange={setDateRangeFilter}
-                />
-              </div>
               <Checkbox
                 label={`Show skipped${stats.skipped ? ` (${stats.skipped})` : ''}`}
                 checked={showSkipped}
@@ -808,9 +866,6 @@ function ReviewsContent() {
                 onChange={setShowSent}
               />
             </InlineStack>
-            <Button onClick={() => setSortNewest((value) => !value)}>
-              {sortNewest ? 'Newest' : 'Oldest'}
-            </Button>
           </InlineStack>
         </div>
 
@@ -845,7 +900,7 @@ function ReviewsContent() {
                 <Badge tone="success">{selectedSentIds.length} already sent</Badge>
               ) : null}
               {selectedJudgeMeReplyIds.length ? (
-                <Badge tone="success">{selectedJudgeMeReplyIds.length} already replied in Judge.me</Badge>
+                <Badge tone="success">{selectedJudgeMeReplyIds.length} already replied in {connectionProviderName}</Badge>
               ) : null}
             </InlineStack>
             <InlineStack gap="200" blockAlign="center">
@@ -885,10 +940,75 @@ function ReviewsContent() {
               <QueueEmptyState
                 connected={pageData.connected}
                 connectUrl={connectUrl}
+                providerName={connectionProviderName}
                 refreshing={isSyncing}
                 onRefresh={handleRefresh}
               />
             )}
+            {reviews.length || currentPage > 1 ? (
+              <div className="rp-table-pagination">
+                <InlineStack align="space-between" blockAlign="center" gap="300">
+                  <InlineStack gap="200" blockAlign="center">
+                    <Text as="span" variant="bodySm" tone="subdued">
+                      {totalPages
+                        ? `Page ${currentPage} of ${totalPages}`
+                        : `Page ${currentPage}`}
+                      {typeof pagination.totalCount === 'number' ? ` · ${pagination.totalCount} reviews` : ''}
+                    </Text>
+                    <div className="rp-page-size-select">
+                      <Select
+                        label="Reviews per page"
+                        labelHidden
+                        options={[
+                          {label: '10 per page', value: '10'},
+                          {label: '20 per page', value: '20'},
+                        ]}
+                        value={String(pageSize)}
+                        disabled={isSyncing}
+                        onChange={handlePageSizeChange}
+                      />
+                    </div>
+                  </InlineStack>
+                  <InlineStack gap="150" blockAlign="center">
+                    <Button
+                      size="slim"
+                      disabled={!pagination.hasPreviousPage || isSyncing}
+                      loading={isSyncing && Number(syncFetcher.formData?.get('page')) === currentPage - 1}
+                      onClick={() => handlePageChange(currentPage - 1)}
+                    >
+                      Previous
+                    </Button>
+                    {totalPages ? (
+                      <span className="rp-pagination-pages">
+                        {pageItems.map((item) => (
+                          typeof item === 'number' ? (
+                            <Button
+                              key={item}
+                              size="slim"
+                              pressed={item === currentPage}
+                              disabled={isSyncing}
+                              onClick={() => handlePageChange(item)}
+                            >
+                              {item}
+                            </Button>
+                          ) : (
+                            <span key={item} className="rp-pagination-gap" aria-hidden="true">...</span>
+                          )
+                        ))}
+                      </span>
+                    ) : null}
+                    <Button
+                      size="slim"
+                      disabled={!pagination.hasNextPage || isSyncing}
+                      loading={isSyncing && Number(syncFetcher.formData?.get('page')) === currentPage + 1}
+                      onClick={() => handlePageChange(currentPage + 1)}
+                    >
+                      Next
+                    </Button>
+                  </InlineStack>
+                </InlineStack>
+              </div>
+            ) : null}
           </div>
 
           <aside className="rp-detail-panel" aria-label="AI draft">
@@ -910,8 +1030,8 @@ function ReviewsContent() {
                     <InlineStack gap="200" blockAlign="center">
                       {activeReview.status === 'skipped' ? <Badge tone="attention">Skipped</Badge> : null}
                       {activeReview.status === 'sent' ? <Badge tone="success">Sent</Badge> : null}
-                      {activeHasJudgeMeReply ? <Badge tone="success">Judge.me replied</Badge> : null}
-                      <Badge>Judge.me</Badge>
+                      {activeHasJudgeMeReply ? <Badge tone="success">{activeProviderName} replied</Badge> : null}
+                      <Badge>{activeProviderName}</Badge>
                     </InlineStack>
                   </InlineStack>
 
@@ -925,26 +1045,26 @@ function ReviewsContent() {
                         <InlineStack align="space-between" blockAlign="center" gap="300">
                           <InlineStack gap="200" blockAlign="center">
                             <Icon source={ChatIcon} tone="success" />
-                            <Text as="h3" variant="headingMd">Judge.me reply</Text>
+                            <Text as="h3" variant="headingMd">{activeProviderName} reply</Text>
                           </InlineStack>
-                          <Badge tone={activeReview.judgeMeReply?.contentAvailable ? 'success' : 'attention'}>
-                            {activeReview.judgeMeReply?.contentAvailable ? 'Imported' : 'Detected'}
+                          <Badge tone={activeSourceReply?.contentAvailable ? 'success' : 'attention'}>
+                            {activeSourceReply?.contentAvailable ? 'Imported' : 'Detected'}
                           </Badge>
                         </InlineStack>
-                        {activeReview.judgeMeReply?.contentAvailable ? (
-                          <Text as="p" variant="bodyMd">{activeReview.judgeMeReply.content}</Text>
+                        {activeSourceReply?.contentAvailable ? (
+                          <Text as="p" variant="bodyMd">{activeSourceReply.content}</Text>
                         ) : (
                           <Text as="p" variant="bodyMd" tone="subdued">
-                            {activeReview.judgeMeReply?.message || 'Judge.me already has an external reply for this review, but ReplyPulse AI: Review Replies could not import the reply text.'}
+                            {activeSourceReply?.message || `${activeProviderName} already has an external reply for this review, but ReplyPulse could not import the reply text.`}
                           </Text>
                         )}
                         <InlineStack gap="200" blockAlign="center">
                           <Text as="span" variant="bodySm" tone="subdued">
-                            {activeReview.judgeMeReply?.author || 'Judge.me'}
+                            {activeSourceReply?.author || activeProviderName}
                           </Text>
-                          {activeReview.judgeMeReply?.createdAt ? (
+                          {activeSourceReply?.createdAt ? (
                             <Text as="span" variant="bodySm" tone="subdued">
-                              {formatReplyDate(activeReview.judgeMeReply.createdAt)}
+                              {formatReplyDate(activeSourceReply.createdAt)}
                             </Text>
                           ) : null}
                         </InlineStack>
@@ -964,7 +1084,7 @@ function ReviewsContent() {
                   {activeHasJudgeMeReply ? (
                     <Banner tone="info">
                       <Text as="p" variant="bodyMd">
-                        This review is already answered in Judge.me. ReplyPulse AI: Review Replies cleared the AI draft and will not generate, edit, regenerate, or approve another public reply for it.
+                        This review is already answered in {activeProviderName}. ReplyPulse cleared the AI draft and will not generate, edit, regenerate, or approve another public reply for it.
                       </Text>
                     </Banner>
                   ) : (
@@ -1017,7 +1137,7 @@ function ReviewsContent() {
                             <DraftPlaceholderIllustration />
                             <Text as="h3" variant="headingMd" alignment="center">Draft not generated yet</Text>
                             <Text as="p" variant="bodyMd" tone="subdued" alignment="center">
-                              Generate the first message when you are ready. ReplyPulse AI: Review Replies will use Brand Voice, product context, star rating, and this review.
+                              Generate the first message when you are ready. ReplyPulse will use Brand Voice, product context, star rating, and this review.
                             </Text>
                           </div>
                         ) : (
@@ -1132,12 +1252,12 @@ function ReviewsContent() {
                       </Text>
                     ) : activeHasJudgeMeReply ? (
                       <Text as="p" variant="bodySm" tone="subdued" alignment="center">
-                        Mark it as Don't reply to clear it from Reviews without changing the existing Judge.me reply.
+                        Mark it as Don't reply to clear it from Reviews without changing the existing {activeProviderName} reply.
                       </Text>
                     ) : !activeHasDraft ? (
                       <Text as="p" variant="bodySm" tone="subdued" alignment="center">
                         {activeHasJudgeMeReply
-                          ? 'This review is excluded from bulk generation because it already has a Judge.me reply.'
+                          ? `This review is excluded from bulk generation because it already has a ${activeProviderName} reply.`
                           : 'Generate a message before approving this reply.'}
                       </Text>
                     ) : (

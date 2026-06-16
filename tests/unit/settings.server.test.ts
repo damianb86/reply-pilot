@@ -15,8 +15,6 @@ describe("settings.server", () => {
     const form = new FormData();
     form.set("highConfidenceThreshold", "120");
     form.set("humanReviewThreshold", "bad");
-    form.set("defaultQueueRange", "invalid");
-    form.set("defaultQueueSort", "oldest");
     form.set("dataRetention", "24-months");
     form.set("timezone", "Invalid/Zone");
     form.set("routeSensitiveReviews", "on");
@@ -27,8 +25,8 @@ describe("settings.server", () => {
 
     expect(result.highConfidenceThreshold).toBe(98);
     expect(result.humanReviewThreshold).toBe(DEFAULT_APP_SETTINGS.humanReviewThreshold);
-    expect(result.defaultQueueRange).toBe(DEFAULT_APP_SETTINGS.defaultQueueRange);
-    expect(result.defaultQueueSort).toBe("oldest");
+    expect("defaultQueueRange" in result).toBe(false);
+    expect("defaultQueueSort" in result).toBe(false);
     expect(result.dataRetention).toBe("24-months");
     expect(result.timezone).toBe(DEFAULT_APP_SETTINGS.timezone);
     expect(result.routeSensitiveReviews).toBe(true);

@@ -8,8 +8,6 @@ export type AppSettings = {
   sendReplyEmail: boolean;
   useProductDescription: boolean;
   onboardingCompleted: boolean;
-  defaultQueueRange: "7-days" | "30-days" | "all";
-  defaultQueueSort: "newest" | "oldest";
   showSkippedByDefault: boolean;
   showSentByDefault: boolean;
   dataRetention: "12-months" | "24-months" | "forever";
@@ -24,8 +22,6 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   sendReplyEmail: false,
   useProductDescription: true,
   onboardingCompleted: false,
-  defaultQueueRange: "7-days",
-  defaultQueueSort: "newest",
   showSkippedByDefault: false,
   showSentByDefault: false,
   dataRetention: "12-months",
@@ -137,12 +133,6 @@ function normalizeSettings(input: Record<string, unknown>): AppSettings {
     sendReplyEmail: booleanValue(input.sendReplyEmail, DEFAULT_APP_SETTINGS.sendReplyEmail),
     useProductDescription: booleanValue(input.useProductDescription, DEFAULT_APP_SETTINGS.useProductDescription),
     onboardingCompleted: booleanValue(input.onboardingCompleted, DEFAULT_APP_SETTINGS.onboardingCompleted),
-    defaultQueueRange: enumValue(input.defaultQueueRange, DEFAULT_APP_SETTINGS.defaultQueueRange, [
-      "7-days",
-      "30-days",
-      "all",
-    ]),
-    defaultQueueSort: enumValue(input.defaultQueueSort, DEFAULT_APP_SETTINGS.defaultQueueSort, ["newest", "oldest"]),
     showSkippedByDefault: booleanValue(input.showSkippedByDefault, DEFAULT_APP_SETTINGS.showSkippedByDefault),
     showSentByDefault: booleanValue(input.showSentByDefault, DEFAULT_APP_SETTINGS.showSentByDefault),
     dataRetention: enumValue(input.dataRetention, DEFAULT_APP_SETTINGS.dataRetention, [
@@ -163,8 +153,6 @@ export function settingsFromFormData(formData: FormData) {
     sendReplyEmail: formData.get("sendReplyEmail"),
     useProductDescription: formData.get("useProductDescription"),
     onboardingCompleted: formData.get("onboardingCompleted"),
-    defaultQueueRange: formData.get("defaultQueueRange"),
-    defaultQueueSort: formData.get("defaultQueueSort"),
     showSkippedByDefault: formData.get("showSkippedByDefault"),
     showSentByDefault: formData.get("showSentByDefault"),
     dataRetention: formData.get("dataRetention"),

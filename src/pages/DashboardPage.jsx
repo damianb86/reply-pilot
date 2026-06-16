@@ -50,8 +50,8 @@ const providers = [
   {
     id: 'yotpo',
     name: 'Yotpo',
-    status: 'Coming soon',
-    available: false,
+    status: 'Available',
+    available: true,
     logo: '/provider-logos/yotpo.svg',
     tone: 'neutral',
   },
@@ -74,6 +74,12 @@ const providers = [
     wordmark: true,
   },
 ];
+
+const providerById = new Map(providers.map((provider) => [provider.id, provider]));
+
+function getProvider(providerId) {
+  return providerById.get(providerId) || providers[0];
+}
 
 const utcMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -122,16 +128,25 @@ function ProviderMark({provider}) {
   );
 }
 
-function ProviderTile({provider, selected, statusOverride}) {
+function ProviderTile({provider, selected, statusOverride, onSelect}) {
   const status = statusOverride || provider.status;
+  const canSelect = provider.available && onSelect;
+
+  function handleKeyDown(event) {
+    if (!canSelect || (event.key !== 'Enter' && event.key !== ' ')) return;
+    event.preventDefault();
+    onSelect(provider.id);
+  }
 
   return (
     <div
       className={`rp-connect-provider-tile ${selected ? 'is-selected' : ''} ${provider.available ? '' : 'is-disabled'}`}
-      role={provider.available ? 'button' : undefined}
-      tabIndex={provider.available ? 0 : undefined}
+      role={canSelect ? 'button' : undefined}
+      tabIndex={canSelect ? 0 : undefined}
       aria-disabled={provider.available ? undefined : true}
       aria-pressed={selected}
+      onClick={canSelect ? () => onSelect(provider.id) : undefined}
+      onKeyDown={handleKeyDown}
     >
       <InlineStack gap="350" blockAlign="center" wrap={false}>
         <ProviderMark provider={provider} />
@@ -175,8 +190,9 @@ function ResultBanner({result}) {
     );
   }
 
+  const providerName = result.providerName || result.error?.providerName || 'review source';
   const statusText = result.error?.status
-    ? `Judge.me returned ${result.error.status}${result.error.statusText ? ` ${result.error.statusText}` : ''}.`
+    ? `${providerName} returned ${result.error.status}${result.error.statusText ? ` ${result.error.statusText}` : ''}.`
     : null;
   const timeoutMs = result.error?.timeoutMs || result.error?.details?.timeoutMs;
   const timeoutText = timeoutMs
@@ -187,14 +203,14 @@ function ResultBanner({result}) {
     <Banner tone="critical">
       <BlockStack gap="200">
         <Text as="p" variant="bodyMd" fontWeight="semibold">
-          We couldn't connect Judge.me.
+          We couldn't connect {providerName}.
         </Text>
         <Text as="p" variant="bodyMd">{result.message}</Text>
         {statusText || timeoutText ? (
           <Text as="p" variant="bodySm" tone="subdued">{statusText || timeoutText}</Text>
         ) : null}
         <Text as="p" variant="bodySm" tone="subdued">
-          Check the Judge.me Private API token, then try again.
+          Check the credentials, then try again.
         </Text>
       </BlockStack>
     </Banner>
@@ -221,28 +237,47 @@ function KeyValueRow({label, value, badgeTone}) {
 function ConnectForm({
   fetcher,
   shop,
-  apiSettingsUrl,
-  apiDocsUrl,
+  loaderData,
   actionPath,
+  initialProvider = 'judgeme',
   showTestStoreDomainField = false,
 }) {
+  const [selectedProvider, setSelectedProvider] = useState(initialProvider);
   const [apiToken, setApiToken] = useState('');
   const [shopDomain, setShopDomain] = useState(shop);
   const [showToken, setShowToken] = useState(false);
+  const [storeId, setStoreId] = useState('');
+  const [apiSecret, setApiSecret] = useState('');
+  const [showApiSecret, setShowApiSecret] = useState(false);
   const pendingIntent = fetcher.formData?.get('intent');
+  const pendingProvider = fetcher.formData?.get('provider') || selectedProvider;
+  const selectedProviderName = getProvider(selectedProvider).name;
   const timeout = useFetcherTimeout(fetcher, {
     timeoutMs: 30000,
-    message: 'Judge.me did not respond in time. Please try again later.',
+    message: `${selectedProviderName} did not respond in time. Please try again later.`,
   });
-  const isSubmitting = timeout.pending && pendingIntent === 'connect-token';
+  const isSubmitting = timeout.pending && (pendingIntent === 'connect-token' || pendingIntent === 'test-connection');
+  const isTesting = isSubmitting && pendingIntent === 'test-connection' && pendingProvider === selectedProvider;
+  const isSaving = isSubmitting && pendingIntent === 'connect-token' && pendingProvider === selectedProvider;
+  const isJudgeMe = selectedProvider === 'judgeme';
+  const isYotpo = selectedProvider === 'yotpo';
+  const canSubmit = isJudgeMe ? Boolean(apiToken.trim()) : Boolean(storeId.trim() && apiSecret.trim());
 
-  function submitConnection() {
-    if (!apiToken.trim() || isSubmitting) return;
+  function submitConnection(intent) {
+    if (!canSubmit || isSubmitting) return;
 
     const formData = new FormData();
-    formData.set('intent', 'connect-token');
-    formData.set('shopDomain', showTestStoreDomainField ? shopDomain.trim() || shop : shop);
-    formData.set('apiToken', apiToken.trim());
+    formData.set('intent', intent);
+    formData.set('provider', selectedProvider);
+
+    if (isJudgeMe) {
+      formData.set('shopDomain', showTestStoreDomainField ? shopDomain.trim() || shop : shop);
+      formData.set('apiToken', apiToken.trim());
+    } else {
+      formData.set('storeId', storeId.trim());
+      formData.set('apiSecret', apiSecret.trim());
+    }
+
     fetcher.submit(formData, {method: 'post', action: actionPath});
   }
 
@@ -256,73 +291,130 @@ function ConnectForm({
               <ProviderTile
                 key={provider.id}
                 provider={provider}
-                selected={provider.id === 'judgeme'}
+                selected={provider.id === selectedProvider}
+                onSelect={setSelectedProvider}
               />
             ))}
           </InlineGrid>
         </BlockStack>
 
         <BlockStack gap="300">
-          <Text as="p" variant="bodyMd">2. Enter your Judge.me credentials</Text>
-          <Text as="p" variant="bodySm" tone="subdued">
-            Judge.me uses this authenticated Shopify shop and your Private API token to import reviews and send approved replies.
-          </Text>
-          {showTestStoreDomainField ? (
-            <div className="rp-connect-test-store-field">
-              <BlockStack gap="200">
-                <BlockStack gap="050">
-                  <Text as="p" variant="bodyMd" fontWeight="semibold">
-                    Test store domain override
-                  </Text>
-                  <Text as="p" variant="bodySm">
-                    This field is only visible on test stores. Use it only for Judge.me testing; in production, ReplyPulse AI: Review Replies uses the authenticated Shopify store.
-                  </Text>
-                </BlockStack>
-                <TextField
-                  label="Judge.me shop domain for tests"
-                  name="shopDomain"
-                  value={shopDomain}
-                  onChange={setShopDomain}
-                  autoComplete="off"
-                  placeholder="your-test-store.myshopify.com"
-                  helpText="Only change this when your Judge.me test data belongs to a different development store domain."
-                />
-              </BlockStack>
-            </div>
-          ) : null}
-          <TextField
-            label="API token"
-            name="apiToken"
-            type={showToken ? 'text' : 'password'}
-            value={apiToken}
-            onChange={setApiToken}
-            autoComplete="off"
-            placeholder="Paste your Private API token from Judge.me"
-            connectedRight={(
-              <Button
-                icon={showToken ? HideIcon : ViewIcon}
-                accessibilityLabel={showToken ? 'Hide API token' : 'Show API token'}
-                onClick={() => setShowToken((value) => !value)}
+          {isJudgeMe ? (
+            <>
+              <Text as="p" variant="bodyMd">2. Enter your Judge.me credentials</Text>
+              <Text as="p" variant="bodySm" tone="subdued">
+                Judge.me uses this authenticated Shopify shop and your Private API token to import reviews and send approved replies.
+              </Text>
+              {showTestStoreDomainField ? (
+                <div className="rp-connect-test-store-field">
+                  <BlockStack gap="200">
+                    <BlockStack gap="050">
+                      <Text as="p" variant="bodyMd" fontWeight="semibold">
+                        Test store domain override
+                      </Text>
+                      <Text as="p" variant="bodySm">
+                        This field is only visible on test stores. Use it only for Judge.me testing; in production, ReplyPulse uses the authenticated Shopify store.
+                      </Text>
+                    </BlockStack>
+                    <TextField
+                      label="Judge.me shop domain for tests"
+                      name="shopDomain"
+                      value={shopDomain}
+                      onChange={setShopDomain}
+                      autoComplete="off"
+                      placeholder="your-test-store.myshopify.com"
+                      helpText="Only change this when your Judge.me test data belongs to a different development store domain."
+                    />
+                  </BlockStack>
+                </div>
+              ) : null}
+              <TextField
+                label="API token"
+                name="apiToken"
+                type={showToken ? 'text' : 'password'}
+                value={apiToken}
+                onChange={setApiToken}
+                autoComplete="off"
+                placeholder="Paste your Private API token from Judge.me"
+                connectedRight={(
+                  <Button
+                    icon={showToken ? HideIcon : ViewIcon}
+                    accessibilityLabel={showToken ? 'Hide API token' : 'Show API token'}
+                    onClick={() => setShowToken((value) => !value)}
+                  />
+                )}
+                helpText="You can find your Private API token in Judge.me: Settings > Integrations > Private API token."
               />
-            )}
-            helpText="You can find your Private API token in Judge.me: Settings > Integrations > Private API token."
-          />
+            </>
+          ) : null}
+
+          {isYotpo ? (
+            <>
+              <Text as="p" variant="bodyMd">2. Enter your Yotpo credentials</Text>
+              <Text as="p" variant="bodySm" tone="subdued">
+                Yotpo uses your Store ID, formerly App Key, and API secret to generate an access token for the Reviews API.
+              </Text>
+              <TextField
+                label="Store ID (App Key)"
+                name="storeId"
+                value={storeId}
+                onChange={setStoreId}
+                autoComplete="off"
+                placeholder="Paste your Yotpo Store ID"
+                helpText="Yotpo also calls this value App Key in some screens and API docs."
+              />
+              <TextField
+                label="API secret"
+                name="apiSecret"
+                type={showApiSecret ? 'text' : 'password'}
+                value={apiSecret}
+                onChange={setApiSecret}
+                autoComplete="off"
+                placeholder="Paste your Yotpo API secret"
+                connectedRight={(
+                  <Button
+                    icon={showApiSecret ? HideIcon : ViewIcon}
+                    accessibilityLabel={showApiSecret ? 'Hide API secret' : 'Show API secret'}
+                    onClick={() => setShowApiSecret((value) => !value)}
+                  />
+                )}
+                helpText="Only Yotpo account administrators can view or generate the API secret."
+              />
+            </>
+          ) : null}
         </BlockStack>
 
         <InlineStack align="space-between" blockAlign="center" gap="300">
           <InlineStack gap="300">
-            <Button variant="plain" url={apiSettingsUrl} target="_blank" icon={ExternalIcon}>
-              Where do I find my Judge.me API token?
-            </Button>
-            <Button variant="plain" url={apiDocsUrl} target="_blank" icon={ExternalIcon}>
-              Read setup guide
-            </Button>
+            {isJudgeMe ? (
+              <>
+                <Button variant="plain" url={loaderData.judgeMeApiSettingsUrl} target="_blank" icon={ExternalIcon}>
+                  Where do I find my Judge.me API token?
+                </Button>
+                <Button variant="plain" url={loaderData.judgeMeApiDocsUrl} target="_blank" icon={ExternalIcon}>
+                  Read setup guide
+                </Button>
+              </>
+            ) : null}
+            {isYotpo ? (
+              <>
+                <Button variant="plain" url={loaderData.yotpoApiCredentialsUrl} target="_blank" icon={ExternalIcon}>
+                  Open Yotpo API credentials
+                </Button>
+                <Button variant="plain" url={loaderData.yotpoCredentialGuideUrl} target="_blank" icon={ExternalIcon}>
+                  How to find credentials
+                </Button>
+                <Button variant="plain" url={loaderData.yotpoAuthenticationDocsUrl} target="_blank" icon={ExternalIcon}>
+                  Authentication docs
+                </Button>
+              </>
+            ) : null}
           </InlineStack>
           <InlineStack gap="200">
-            <Button variant="primary" loading={isSubmitting} disabled={!apiToken.trim() || isSubmitting} onClick={submitConnection}>
+            <Button loading={isTesting} disabled={!canSubmit || isSubmitting} onClick={() => submitConnection('test-connection')}>
               Test connection
             </Button>
-            <Button disabled={!apiToken.trim() || isSubmitting} onClick={submitConnection}>
+            <Button variant="primary" loading={isSaving} disabled={!canSubmit || isSubmitting} onClick={() => submitConnection('connect-token')}>
               Save
             </Button>
           </InlineStack>
@@ -333,10 +425,12 @@ function ConnectForm({
 }
 
 function CurrentConnectionCard({connection, fetcher, actionPath}) {
+  const provider = getProvider(connection?.provider);
+  const providerName = connection?.providerName || provider.name;
   const pendingIntent = fetcher.formData?.get('intent');
   const timeout = useFetcherTimeout(fetcher, {
     timeoutMs: 20000,
-    message: 'Refreshing the Judge.me connection took too long. Please try again later.',
+    message: `Refreshing the ${providerName} connection took too long. Please try again later.`,
   });
   const isRefreshing = timeout.pending && pendingIntent === 'refresh';
 
@@ -352,7 +446,7 @@ function CurrentConnectionCard({connection, fetcher, actionPath}) {
         <InlineStack align="space-between" blockAlign="center" gap="300">
           <InlineStack gap="200" blockAlign="center">
             <Icon source={StatusActiveIcon} tone="success" />
-            <Text as="h2" variant="headingMd">{connection ? 'Current connection' : 'Judge.me connection'}</Text>
+            <Text as="h2" variant="headingMd">{connection ? 'Current connection' : 'Review source connection'}</Text>
           </InlineStack>
           <Badge tone={connection ? 'success' : 'attention'}>{connection ? 'Connected' : 'Not connected'}</Badge>
         </InlineStack>
@@ -360,16 +454,16 @@ function CurrentConnectionCard({connection, fetcher, actionPath}) {
 
         {connection ? (
           <BlockStack gap="0">
-            <KeyValueRow label="Provider" value={<InlineStack gap="250" align="end" blockAlign="center"><ProviderMark provider={providers[0]} /><Text as="span" variant="bodyMd">Judge.me</Text></InlineStack>} />
-            <KeyValueRow label="Connected shop" value={connection.shopDomain} />
-            <KeyValueRow label="Auth method" value="Private API token" />
-            <KeyValueRow label="Token" value={tokenWithViewIcon(connection.tokenMask)} />
+            <KeyValueRow label="Provider" value={<InlineStack gap="250" align="end" blockAlign="center"><ProviderMark provider={provider} /><Text as="span" variant="bodyMd">{providerName}</Text></InlineStack>} />
+            <KeyValueRow label={connection.provider === 'yotpo' ? 'Store ID' : 'Connected shop'} value={connection.connectedIdentifier || connection.shopDomain || connection.storeId} />
+            <KeyValueRow label="Auth method" value={connection.authMethodLabel || connection.authMethod} />
+            <KeyValueRow label={connection.credentialLabel || 'Credential'} value={tokenWithViewIcon(connection.credentialMask || connection.tokenMask || connection.secretMask)} />
             <KeyValueRow label="Last verified" value={formatDateTime(connection.lastVerifiedAt)} />
-            <KeyValueRow label="Imported reviews" value={`${formatNumber(connection.reviewCount)} available`} />
+            <KeyValueRow label={connection.provider === 'yotpo' ? 'Reviews checked' : 'Imported reviews'} value={`${formatNumber(connection.reviewCount)} available`} />
           </BlockStack>
         ) : (
           <Text as="p" variant="bodyMd" tone="subdued">
-            Add your Judge.me shop and API token to verify the source before importing reviews.
+            Choose a review source and add its credentials to verify the connection before importing reviews.
           </Text>
         )}
 
@@ -395,7 +489,7 @@ function AfterConnectionCard({connected, appHandle}) {
   const steps = connected
     ? [
         {icon: ImportIcon, tone: 'green', title: 'Import reviews', text: "We'll keep your reviews synced and ready to process."},
-        {icon: MicrophoneIcon, tone: 'purple', title: 'Train brand voice', text: 'Paste 5-10 past replies so ReplyPulse AI: Review Replies learns your tone.'},
+        {icon: MicrophoneIcon, tone: 'purple', title: 'Train brand voice', text: 'Paste 5-10 past replies so ReplyPulse learns your tone.'},
         {icon: SendIcon, tone: 'blue', title: 'Review AI replies', text: 'Drafts will appear in the approval queue before anything is sent.'},
       ]
     : [
@@ -449,6 +543,8 @@ function AfterConnectionCard({connected, appHandle}) {
 }
 
 function ConnectedManager({connection, fetcher, actionPath, onChangeProvider}) {
+  const provider = getProvider(connection?.provider);
+  const providerName = connection?.providerName || provider.name;
   const pendingIntent = fetcher.formData?.get('intent');
   const timeout = useFetcherTimeout(fetcher, {
     timeoutMs: 20000,
@@ -464,13 +560,13 @@ function ConnectedManager({connection, fetcher, actionPath, onChangeProvider}) {
   }
 
   const rows = [
-    ['Provider', <InlineStack key="provider" gap="250" blockAlign="center"><ProviderMark provider={providers[0]} /><Text as="span" variant="bodyMd">Judge.me</Text></InlineStack>],
-    ['Connected shop', connection.shopDomain],
-    ['Auth method', 'Private API token'],
-    ['Token', tokenWithViewIcon(connection.tokenMask)],
+    ['Provider', <InlineStack key="provider" gap="250" blockAlign="center"><ProviderMark provider={provider} /><Text as="span" variant="bodyMd">{providerName}</Text></InlineStack>],
+    [connection.provider === 'yotpo' ? 'Store ID' : 'Connected shop', connection.connectedIdentifier || connection.shopDomain || connection.storeId],
+    ['Auth method', connection.authMethodLabel || connection.authMethod],
+    [connection.credentialLabel || 'Credential', tokenWithViewIcon(connection.credentialMask || connection.tokenMask || connection.secretMask)],
     ['Connected at', formatDateTime(connection.createdAt)],
     ['Last verified', formatDateTime(connection.lastVerifiedAt)],
-    ['Imported reviews', `${formatNumber(connection.reviewCount)} available`],
+    [connection.provider === 'yotpo' ? 'Reviews checked' : 'Imported reviews', `${formatNumber(connection.reviewCount)} available`],
     ['Sync health', <Badge key="health" tone={connection.status === 'connected' ? 'success' : 'critical'}>{connection.status === 'connected' ? 'Healthy' : 'Needs attention'}</Badge>],
   ];
 
@@ -479,7 +575,7 @@ function ConnectedManager({connection, fetcher, actionPath, onChangeProvider}) {
       <BlockStack gap="400">
         <Text as="h2" variant="headingLg">Connected source</Text>
         <Banner tone="success">
-          Judge.me connected successfully
+          {providerName} connected successfully
         </Banner>
 
         <BlockStack gap="300">
@@ -522,8 +618,8 @@ function ConnectedManager({connection, fetcher, actionPath, onChangeProvider}) {
               <ProviderTile
                 key={provider.id}
                 provider={provider}
-                selected={provider.id === 'judgeme'}
-                statusOverride={provider.id === 'judgeme' ? 'Connected' : undefined}
+                selected={provider.id === connection.provider}
+                statusOverride={provider.id === connection.provider ? 'Connected' : undefined}
               />
             ))}
           </InlineGrid>
@@ -534,6 +630,8 @@ function ConnectedManager({connection, fetcher, actionPath, onChangeProvider}) {
 }
 
 export function ConnectPanel({connection, fetcher, loaderData, actionPath, showProviderSetup, onChangeProvider}) {
+  const activeProviderName = connection?.providerName || getProvider(connection?.provider).name;
+
   if (connection && !showProviderSetup) {
     return (
       <ConnectedManager
@@ -550,19 +648,19 @@ export function ConnectPanel({connection, fetcher, loaderData, actionPath, showP
       <BlockStack gap="400">
         <InlineStack align="space-between" blockAlign="center">
           <Text as="h2" variant="headingLg">{connection ? 'Change review source' : 'Connect your review source'}</Text>
-          {connection ? <Badge tone="info">Judge.me active</Badge> : null}
+          {connection ? <Badge tone="info">{activeProviderName} active</Badge> : null}
         </InlineStack>
         {connection ? (
           <Banner tone="info">
-            Other review providers are coming soon. You can refresh or reconnect Judge.me for now.
+            Choose a provider below to test and save a different review source.
           </Banner>
         ) : null}
         <ConnectForm
           fetcher={fetcher}
           shop={loaderData.shop}
-          apiSettingsUrl={loaderData.judgeMeApiSettingsUrl}
-          apiDocsUrl={loaderData.judgeMeApiDocsUrl}
+          loaderData={loaderData}
           actionPath={actionPath}
+          initialProvider={connection?.provider || 'judgeme'}
           showTestStoreDomainField={Boolean(loaderData.showJudgeMeTestDomainField)}
         />
       </BlockStack>
@@ -572,6 +670,9 @@ export function ConnectPanel({connection, fetcher, loaderData, actionPath, showP
 
 function buildDebugInfo({connection, loaderData, result}) {
   const connected = Boolean(connection);
+  const providerName = connection?.providerName || result?.providerName || 'None';
+  const connectedIdentifier = connection?.connectedIdentifier || connection?.shopDomain || connection?.storeId || 'Not connected';
+  const credentialMask = connection?.credentialMask || connection?.tokenMask || connection?.secretMask || 'Not saved';
   const reviewCount = connection?.reviewCount ?? 0;
   const connectionStatus = connection?.status || 'not_connected';
   const account = connection?.account && typeof connection.account === 'object' && !Array.isArray(connection.account)
@@ -587,7 +688,7 @@ function buildDebugInfo({connection, loaderData, result}) {
     connection?.updatedAt ? ['Database updated', formatDateTime(connection.updatedAt)] : null,
     connection?.createdAt ? ['Record created', formatDateTime(connection.createdAt)] : null,
     connection?.lastError ? ['Last provider error', connection.lastError] : null,
-    !connected ? ['Connection state', 'No saved Judge.me connection for this shop.'] : null,
+    !connected ? ['Connection state', 'No saved review source connection for this shop.'] : null,
   ].filter(Boolean);
 
   return {
@@ -595,11 +696,11 @@ function buildDebugInfo({connection, loaderData, result}) {
       ['Environment', loaderData.appEnv || 'development', 'warning'],
       ['Session shop', loaderData.shop],
       ['Connection ID', connection?.id || 'Not saved'],
-      ['Provider', connected ? 'judge_me' : 'None'],
+      ['Provider', connected ? providerName : 'None'],
       ['Connection status', connectionStatus, connected ? 'success' : 'attention'],
-      ['Auth method', connection?.authMethod || 'private_token'],
-      ['Token (masked)', connection?.tokenMask || 'Not saved'],
-      ['Connected shop', connection?.shopDomain || 'Not connected'],
+      ['Auth method', connection?.authMethodLabel || connection?.authMethod || 'Not configured'],
+      ['Credential (masked)', credentialMask],
+      ['Connected identifier', connectedIdentifier],
       ['Scope', connection?.scope || 'Not returned by provider'],
     ],
     health: [
@@ -615,10 +716,11 @@ function buildDebugInfo({connection, loaderData, result}) {
       connection: connection
         ? {
             id: connection.id,
+            provider: connection.provider,
             status: connection.status,
-            shopDomain: connection.shopDomain,
+            connectedIdentifier,
             authMethod: connection.authMethod,
-            tokenMask: connection.tokenMask,
+            credentialMask,
             reviewCount: connection.reviewCount,
             lastVerifiedAt: connection.lastVerifiedAt,
             updatedAt: connection.updatedAt,
@@ -760,8 +862,8 @@ export default function DashboardPage() {
     ? 'Your review source is connected'
     : 'Connect your review source and start saving time';
   const pageSubtitle = connected
-    ? 'ReplyPulse AI: Review Replies is now syncing reviews and is ready for brand voice training and reply approval workflows.'
-    : 'ReplyPulse AI: Review Replies pulls your reviews, learns your brand voice, and helps you reply faster, always with human approval.';
+    ? 'ReplyPulse is now syncing reviews and is ready for brand voice training and reply approval workflows.'
+    : 'ReplyPulse pulls your reviews, learns your brand voice, and helps you reply faster, always with human approval.';
 
   return (
     <BlockStack gap="400">

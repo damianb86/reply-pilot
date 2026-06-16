@@ -3,7 +3,7 @@
 
 client_id = "54e8e57d7f234f7651a96f600f2bb3d2"
 name = "ReplyPulse AI: Review Replies"
-application_url = "https://qorve-3.duckdns.org"
+application_url = "https://app-reply-pulse.zuam.dev"
 embedded = true
 handle = "reply-pilot"
 
@@ -21,4 +21,4 @@ scopes = "read_products"
 use_legacy_install_flow = false
 
 [auth]
-redirect_urls = [ "https://qorve-3.duckdns.org/auth/callback" ]
+redirect_urls = [ "https://app-reply-pulse.zuam.dev/auth/callback" ]

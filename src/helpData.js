@@ -1,7 +1,7 @@
 export const helpHeroBenefits = [
   {
     title: 'Configure',
-    description: 'ReplyPulse AI: Review Replies for your review workflow',
+    description: 'ReplyPulse for your review workflow',
   },
   {
     title: 'Connect',
@@ -13,7 +13,7 @@ export const helpHeroBenefits = [
   },
   {
     title: 'Support',
-    description: 'Guidance from the ReplyPulse AI: Review Replies team',
+    description: 'Guidance from the ReplyPulse team',
   },
 ];
 
@@ -65,7 +65,7 @@ export const helpResources = [
   },
   {
     title: 'Changelog',
-    description: "See what's new in ReplyPulse AI: Review Replies",
+    description: "See what's new in ReplyPulse",
     icon: 'changelog',
   },
   {

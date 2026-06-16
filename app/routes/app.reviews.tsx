@@ -12,7 +12,7 @@ import {
 } from "../reviews.server";
 import { serializeAiError } from "../ai.server";
 import { CreditError, formatCreditAmount, serializeCreditError } from "../credits.server";
-import { serializeJudgeMeError } from "../judgeme.server";
+import { serializeReviewSourceError } from "../review-source.server";
 import { authenticate } from "../shopify.server";
 
 function parseIds(formData: FormData) {
@@ -26,6 +26,11 @@ function parseIds(formData: FormData) {
 
   const id = String(formData.get("id") ?? "");
   return id ? [id] : [];
+}
+
+function parsePositiveInteger(value: FormDataEntryValue | string | null, fallback = 1) {
+  const number = Number(value || fallback);
+  return Number.isFinite(number) && number > 0 ? Math.floor(number) : fallback;
 }
 
 function generationMessage(
@@ -54,18 +59,26 @@ function generationMessage(
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const { session } = await authenticate.admin(request);
-  return loadReviewsPageData(session.shop);
+  const url = new URL(request.url);
+  return loadReviewsPageData(session.shop, {
+    page: parsePositiveInteger(url.searchParams.get("page")),
+    pageSize: parsePositiveInteger(url.searchParams.get("pageSize"), 10),
+  });
 }
 
 export async function action({ request }: ActionFunctionArgs) {
   const { admin, session } = await authenticate.admin(request);
   const formData = await request.formData();
   const intent = String(formData.get("intent") ?? "");
+  const page = parsePositiveInteger(formData.get("page"));
+  const pageSize = parsePositiveInteger(formData.get("pageSize"), 10);
+  const pageOptions = { page, pageSize };
 
   try {
     if (intent === "sync") {
       const source = String(formData.get("source") ?? "");
-      const data = await loadReviewsPageData(session.shop, { sync: true, admin });
+      const forceSync = ["true", "1", "yes", "on"].includes(String(formData.get("force") ?? "").toLowerCase());
+      const data = await loadReviewsPageData(session.shop, { sync: true, forceSync, admin, ...pageOptions });
       if (!data.connected) {
         return {
           ok: false,
@@ -75,14 +88,19 @@ export async function action({ request }: ActionFunctionArgs) {
         };
       }
 
-      return { ok: true, intent, message: source === "initial-load" ? "" : "Reviews refreshed.", ...data };
+      return {
+        ok: true,
+        intent,
+        message: ["initial-load", "page-navigation"].includes(source) ? "" : "Reviews refreshed.",
+        ...data,
+      };
     }
 
     if (intent === "regenerate") {
       const ids = parseIds(formData);
       const nudge = String(formData.get("nudge") ?? "");
       const result = await regenerateDrafts(session.shop, ids, nudge || undefined, admin);
-      const data = await loadReviewsPageData(session.shop);
+      const data = await loadReviewsPageData(session.shop, pageOptions);
       return {
         ok: result.failed === 0,
         intent,
@@ -96,7 +114,7 @@ export async function action({ request }: ActionFunctionArgs) {
     if (intent === "generate") {
       const ids = parseIds(formData);
       const result = await generateDrafts(session.shop, ids, admin);
-      const data = await loadReviewsPageData(session.shop);
+      const data = await loadReviewsPageData(session.shop, pageOptions);
       return {
         ok: result.failed === 0,
         intent,
@@ -115,7 +133,7 @@ export async function action({ request }: ActionFunctionArgs) {
           ok: false,
           intent,
           message: "Draft text is required.",
-          ...(await loadReviewsPageData(session.shop)),
+          ...(await loadReviewsPageData(session.shop, pageOptions)),
         };
       }
 
@@ -124,7 +142,7 @@ export async function action({ request }: ActionFunctionArgs) {
         ok: true,
         intent,
         message: "Draft updated.",
-        ...(await loadReviewsPageData(session.shop)),
+        ...(await loadReviewsPageData(session.shop, pageOptions)),
       };
     }
 
@@ -136,7 +154,7 @@ export async function action({ request }: ActionFunctionArgs) {
           ok: false,
           intent,
           message: "Describe the draft change first.",
-          ...(await loadReviewsPageData(session.shop)),
+          ...(await loadReviewsPageData(session.shop, pageOptions)),
         };
       }
 
@@ -145,7 +163,7 @@ export async function action({ request }: ActionFunctionArgs) {
           ok: false,
           intent,
           message: "Draft change instructions must be 100 characters or less.",
-          ...(await loadReviewsPageData(session.shop)),
+          ...(await loadReviewsPageData(session.shop, pageOptions)),
         };
       }
 
@@ -154,7 +172,7 @@ export async function action({ request }: ActionFunctionArgs) {
         ok: Boolean(result),
         intent,
         message: result ? "Draft adjusted." : "Select a pending generated draft first.",
-        ...(await loadReviewsPageData(session.shop)),
+        ...(await loadReviewsPageData(session.shop, pageOptions)),
       };
     }
 
@@ -165,7 +183,7 @@ export async function action({ request }: ActionFunctionArgs) {
         ok: true,
         intent,
         message: `${count} review${count === 1 ? "" : "s"} skipped.`,
-        ...(await loadReviewsPageData(session.shop)),
+        ...(await loadReviewsPageData(session.shop, pageOptions)),
       };
     }
 
@@ -176,22 +194,24 @@ export async function action({ request }: ActionFunctionArgs) {
         ok: true,
         intent,
         message: `${count} review${count === 1 ? "" : "s"} restored.`,
-        ...(await loadReviewsPageData(session.shop)),
+        ...(await loadReviewsPageData(session.shop, pageOptions)),
       };
     }
 
     if (intent === "send") {
       const ids = parseIds(formData);
       const result = await approveAndSendDrafts(session.shop, ids);
-      const data = await loadReviewsPageData(session.shop);
+      const data = await loadReviewsPageData(session.shop, pageOptions);
       const blockedCount = result.alreadyReplied.length;
       const sentMessage = result.sent
         ? `${result.sent} review${result.sent === 1 ? "" : "s"} approved and sent.`
         : "";
       const alreadyRepliedMessage = blockedCount
         ? blockedCount === 1
-          ? "Judge.me rejected this review because it already has a reply."
-          : `Judge.me rejected ${blockedCount} reviews because they already have replies.`
+          ? result.alreadyReplied[0]?.message || "This review already has a reply."
+          : `${blockedCount} reviews already have replies in ${
+              result.alreadyReplied[0]?.providerName || data.connectionProviderName || "the review source"
+            }.`
         : "";
       const failureMessage = result.errors.length
         ? `${result.errors.length} failed.`
@@ -215,13 +235,13 @@ export async function action({ request }: ActionFunctionArgs) {
         ? serializeAiError(error)
         : error instanceof CreditError
           ? serializeCreditError(error)
-        : serializeJudgeMeError(error);
+        : serializeReviewSourceError(error);
     return {
       ok: false,
       intent,
       message: serialized.message,
       error: serialized,
-      ...(await loadReviewsPageData(session.shop)),
+      ...(await loadReviewsPageData(session.shop, pageOptions)),
     };
   }
 
@@ -229,7 +249,7 @@ export async function action({ request }: ActionFunctionArgs) {
     ok: false,
     intent,
     message: "Unknown Reviews action.",
-    ...(await loadReviewsPageData(session.shop)),
+    ...(await loadReviewsPageData(session.shop, pageOptions)),
   };
 }
 

@@ -1,14 +1,19 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import DashboardPage from "../../src/pages/DashboardPage";
 import {
-  disconnectJudgeMe,
-  getJudgeMeConnectionView,
+  buildJudgeMeSnapshot,
   isJudgeMeTestDomainFieldEnabled,
-  refreshJudgeMeConnection,
-  serializeJudgeMeError,
   upsertJudgeMeConnection,
 } from "../judgeme.server";
+import {
+  clearOtherReviewSources,
+  disconnectReviewSource,
+  getReviewSourceConnectionView,
+  refreshReviewSourceConnection,
+  serializeReviewSourceError,
+} from "../review-source.server";
 import { authenticate } from "../shopify.server";
+import { testYotpoConnection, upsertYotpoConnection } from "../yotpo.server";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const { session } = await authenticate.admin(request);
@@ -17,9 +22,13 @@ export async function loader({ request }: LoaderFunctionArgs) {
   return {
     shop: session.shop,
     appHandle: process.env.SHOPIFY_APP_HANDLE || "reply-pilot",
-    connection: await getJudgeMeConnectionView(session.shop),
+    connection: await getReviewSourceConnectionView(session.shop),
     judgeMeApiSettingsUrl: "https://judge.me/settings?jump_to=judge.me+api",
     judgeMeApiDocsUrl: "https://judge.me/help/en/articles/8409180-judge-me-api",
+    yotpoApiCredentialsUrl: "https://app.yotpo.com/account_settings/general",
+    yotpoCredentialGuideUrl: "https://support.yotpo.com/docs/finding-your-yotpo-app-key-and-secret-key-3",
+    yotpoApiCredentialsDocsUrl: "https://apidocs.yotpo.com/reference/finding-your-app-key-and-api-secret",
+    yotpoAuthenticationDocsUrl: "https://apidocs.yotpo.com/reference/yotpo-authentication",
     isDevelopment: appEnv !== "production",
     showJudgeMeTestDomainField: isJudgeMeTestDomainFieldEnabled(),
     appEnv,
@@ -31,7 +40,67 @@ export async function action({ request }: ActionFunctionArgs) {
   const formData = await request.formData();
   const intent = String(formData.get("intent") ?? "");
 
-  if (intent === "connect-token") {
+  if (intent === "test-connection" || intent === "connect-token") {
+    const provider = String(formData.get("provider") ?? "judgeme") === "yotpo" ? "yotpo" : "judgeme";
+
+    if (provider === "yotpo") {
+      const storeId = String(formData.get("storeId") ?? "").trim();
+      const apiSecret = String(formData.get("apiSecret") ?? "").trim();
+
+      if (!storeId || !apiSecret) {
+        return {
+          ok: false,
+          intent,
+          provider,
+          providerName: "Yotpo",
+          message: "Yotpo Store ID and API secret are required.",
+          connection: await getReviewSourceConnectionView(session.shop),
+        };
+      }
+
+      try {
+        if (intent === "test-connection") {
+          await testYotpoConnection({ storeId, apiSecret });
+
+          return {
+            ok: true,
+            intent,
+            provider,
+            providerName: "Yotpo",
+            message: "Yotpo connection tested successfully.",
+            connection: await getReviewSourceConnectionView(session.shop),
+          };
+        }
+
+        await upsertYotpoConnection({
+          shop: session.shop,
+          storeId,
+          apiSecret,
+          authMethod: "store_id_api_secret",
+        });
+
+        return {
+          ok: true,
+          intent,
+          provider,
+          providerName: "Yotpo",
+          message: "Yotpo connected successfully.",
+          connection: await getReviewSourceConnectionView(session.shop),
+        };
+      } catch (error) {
+        const serialized = serializeReviewSourceError(error, provider);
+        return {
+          ok: false,
+          intent,
+          provider,
+          providerName: "Yotpo",
+          message: serialized.message,
+          error: serialized,
+          connection: await getReviewSourceConnectionView(session.shop),
+        };
+      }
+    }
+
     const apiToken = String(formData.get("apiToken") ?? "").trim();
     const submittedShopDomain = String(formData.get("shopDomain") ?? "").trim();
     const shopDomain =
@@ -43,63 +112,91 @@ export async function action({ request }: ActionFunctionArgs) {
       return {
         ok: false,
         intent,
+        provider,
+        providerName: "Judge.me",
         message: "Judge.me private API token is required.",
+        connection: await getReviewSourceConnectionView(session.shop),
       };
     }
 
     try {
+      if (intent === "test-connection") {
+        await buildJudgeMeSnapshot(apiToken, shopDomain);
+
+        return {
+          ok: true,
+          intent,
+          provider,
+          providerName: "Judge.me",
+          message: "Judge.me connection tested successfully.",
+          connection: await getReviewSourceConnectionView(session.shop),
+        };
+      }
+
       await upsertJudgeMeConnection({
         shop: session.shop,
         shopDomain,
         apiToken,
         authMethod: "private_token",
       });
+      await clearOtherReviewSources(session.shop, "judgeme");
 
       return {
         ok: true,
         intent,
+        provider,
+        providerName: "Judge.me",
         message: "Judge.me connected successfully.",
-        connection: await getJudgeMeConnectionView(session.shop),
+        connection: await getReviewSourceConnectionView(session.shop),
       };
     } catch (error) {
-      const serialized = serializeJudgeMeError(error);
+      const serialized = serializeReviewSourceError(error, provider);
       return {
         ok: false,
         intent,
+        provider,
+        providerName: "Judge.me",
         message: serialized.message,
         error: serialized,
+        connection: await getReviewSourceConnectionView(session.shop),
       };
     }
   }
 
   if (intent === "refresh") {
+    const connection = await getReviewSourceConnectionView(session.shop);
+
     try {
-      await refreshJudgeMeConnection(session.shop);
+      await refreshReviewSourceConnection(session.shop);
 
       return {
         ok: true,
         intent,
-        message: "Judge.me connection refreshed.",
-        connection: await getJudgeMeConnectionView(session.shop),
+        provider: connection?.provider,
+        providerName: connection?.providerName || "Review source",
+        message: `${connection?.providerName || "Review source"} connection refreshed.`,
+        connection: await getReviewSourceConnectionView(session.shop),
       };
     } catch (error) {
-      const serialized = serializeJudgeMeError(error);
+      const serialized = serializeReviewSourceError(error, connection?.provider);
       return {
         ok: false,
         intent,
+        provider: connection?.provider,
+        providerName: connection?.providerName || "Review source",
         message: serialized.message,
         error: serialized,
-        connection: await getJudgeMeConnectionView(session.shop),
+        connection: await getReviewSourceConnectionView(session.shop),
       };
     }
   }
 
   if (intent === "disconnect") {
-    await disconnectJudgeMe(session.shop);
+    await disconnectReviewSource(session.shop);
     return {
       ok: true,
       intent,
-      message: "Judge.me disconnected.",
+      message: "Review source disconnected.",
       connection: null,
     };
   }

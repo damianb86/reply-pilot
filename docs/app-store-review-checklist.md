@@ -11,7 +11,7 @@ Local pre-review updated May 8, 2026 against Shopify's App Store AI self-review 
 - [x] `npm run test` passes.
 - [x] `npm run build` passes.
 - [x] `shopify app build` passes.
-- [x] Production app URL responds over HTTPS: `https://qorve-3.duckdns.org`.
+- [x] Production app URL responds over HTTPS: `https://app-reply-pulse.zuam.dev`.
 
 ## Code review status
 

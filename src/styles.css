@@ -729,6 +729,32 @@ select {
   vertical-align: top;
 }
 
+.rp-table-pagination {
+  padding: 12px 16px;
+  border-top: 1px solid var(--rp-border);
+  background: var(--rp-card-surface);
+}
+
+.rp-pagination-pages {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: min(100%, 520px);
+}
+
+.rp-pagination-gap {
+  min-width: 18px;
+  color: var(--rp-text-muted);
+  text-align: center;
+  line-height: 28px;
+}
+
+.rp-page-size-select {
+  min-width: 132px;
+}
+
 .rp-queue-empty {
   min-height: 560px;
   padding: 48px 24px;
@@ -2096,27 +2122,81 @@ select {
   min-height: 240px;
 }
 
+.rp-help-page {
+  --rp-help-ink: #111827;
+  --rp-help-slate: #374151;
+  --rp-help-muted: #6B7280;
+  --rp-help-primary: #0F766E;
+  --rp-help-primary-strong: #115E59;
+  --rp-help-blue: #1D4ED8;
+  --rp-help-coral: #C2410C;
+  --rp-help-amber: #B45309;
+  --rp-help-purple: #6D28D9;
+  --rp-help-shadow: 0 18px 46px rgba(17, 24, 39, 0.1);
+  color: var(--rp-help-ink);
+  font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.rp-help-page h1,
+.rp-help-page h2,
+.rp-help-page h3 {
+  color: var(--rp-help-ink);
+  font-family: Inter, "SF Pro Display", ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-weight: 780;
+  letter-spacing: 0;
+}
+
+.rp-help-page p {
+  color: var(--rp-help-slate);
+}
+
+.rp-help-page .Polaris-Text--toneSubdued {
+  color: var(--rp-help-muted);
+}
+
+.rp-help-page .Polaris-Card {
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(17, 24, 39, 0.055);
+  overflow: hidden;
+}
+
+.rp-help-header {
+  padding: 2px 2px 6px;
+}
+
+.rp-help-header p {
+  max-width: 760px;
+}
+
 .rp-empty-mark,
 .rp-help-icon {
   width: 48px;
   height: 48px;
   border-radius: 8px;
   display: inline-flex;
+  flex: 0 0 auto;
   align-items: center;
   justify-content: center;
   background: var(--rp-platform-chip-surface);
   color: var(--rp-text-primary);
 }
 
+.rp-help-icon {
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.72),
+    0 10px 22px rgba(17, 24, 39, 0.09);
+}
+
 .rp-help-icon.is-sm {
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   border-radius: 999px;
 }
 
 .rp-help-icon.is-blue,
 .rp-empty-mark.is-blue {
-  background: var(--rp-preview-surface);
+  background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
   color: var(--rp-preview-text);
 }
 
@@ -2126,32 +2206,32 @@ select {
 }
 
 .rp-help-icon.is-green {
-  background: var(--rp-approved-surface);
+  background: linear-gradient(135deg, #ECFDF3 0%, #CCFBF1 100%);
   color: var(--rp-approved-text);
 }
 
 .rp-help-icon.is-yellow {
-  background: var(--rp-attention-surface);
+  background: linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%);
   color: var(--rp-attention-text);
 }
 
 .rp-help-icon.is-purple {
-  background: var(--rp-generated-surface);
+  background: linear-gradient(135deg, #F5F3FF 0%, #EDE9FE 100%);
   color: var(--rp-generated-text);
 }
 
 .rp-help-icon.is-red {
-  background: var(--rp-error-surface);
+  background: linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 100%);
   color: var(--rp-error-text);
 }
 
 .rp-help-icon.is-coral {
-  background: var(--rp-edited-surface);
+  background: linear-gradient(135deg, #FFF7ED 0%, #FED7AA 100%);
   color: var(--rp-edited-text);
 }
 
 .rp-help-icon.is-amber {
-  background: var(--rp-attention-surface);
+  background: linear-gradient(135deg, #FFFBEB 0%, #FDE68A 100%);
   color: var(--rp-attention-text);
 }
 
@@ -2182,34 +2262,83 @@ select {
 
 .rp-help-hero {
   position: relative;
-  padding: 30px;
-  border: 1px solid var(--rp-border-subtle);
+  min-height: 368px;
+  padding: 34px;
+  border: 1px solid rgba(17, 24, 39, 0.1);
   border-radius: 8px;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.72fr);
-  gap: 24px;
+  grid-template-columns: minmax(360px, 0.9fr) minmax(320px, 0.58fr);
+  gap: 28px;
   align-items: stretch;
   overflow: hidden;
-  background: linear-gradient(135deg, var(--rp-card-surface) 0%, var(--rp-platform-chip-surface) 100%);
-  box-shadow: 0 14px 38px rgba(var(--rp-text-primary-rgb), 0.06);
+  isolation: isolate;
+  background-color: #F8FAFC;
+  background-image:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.9) 44%, rgba(255, 255, 255, 0.54) 72%, rgba(255, 255, 255, 0.32) 100%),
+    linear-gradient(135deg, rgba(204, 251, 241, 0.82) 0%, rgba(239, 246, 255, 0.44) 44%, rgba(255, 247, 237, 0.6) 100%),
+    url("/help/help-hero-bg.jpg");
+  background-position: center right;
+  background-size: cover;
+  box-shadow: var(--rp-help-shadow);
+}
+
+.rp-help-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background:
+    linear-gradient(120deg, rgba(15, 118, 110, 0.12) 0%, rgba(15, 118, 110, 0) 34%),
+    linear-gradient(0deg, rgba(17, 24, 39, 0.07), rgba(17, 24, 39, 0));
+  pointer-events: none;
+}
+
+.rp-help-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-image:
+    linear-gradient(rgba(17, 24, 39, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(17, 24, 39, 0.035) 1px, transparent 1px);
+  background-size: 38px 38px;
+  opacity: 0.28;
+  pointer-events: none;
 }
 
 .rp-help-hero-copy {
   min-width: 0;
+  max-width: 640px;
+  position: relative;
+  z-index: 1;
   display: grid;
   align-content: center;
-  gap: 18px;
+  gap: 20px;
+}
+
+.rp-help-hero-copy h2 {
+  max-width: 600px;
+  line-height: 1.08;
+}
+
+.rp-help-hero-copy p {
+  max-width: 610px;
+  color: rgba(55, 65, 81, 0.86);
 }
 
 .rp-help-hero-panel {
   min-width: 0;
-  padding: 20px;
-  border: 1px solid rgba(var(--rp-text-primary-rgb), 0.12);
+  align-self: center;
+  position: relative;
+  z-index: 1;
+  padding: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.78);
   border-radius: 8px;
   display: grid;
   gap: 20px;
-  background: var(--rp-card-surface);
-  box-shadow: 0 12px 34px rgba(var(--rp-text-primary-rgb), 0.08);
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 18px 42px rgba(17, 24, 39, 0.13);
+  backdrop-filter: blur(14px);
 }
 
 .rp-help-check-row,
@@ -2226,39 +2355,81 @@ select {
   border-radius: 999px;
   display: inline-grid;
   place-items: center;
-  background: var(--rp-approved-surface);
+  background: #CCFBF1;
   color: var(--rp-approved-text);
   font-weight: 800;
   line-height: 1;
+  box-shadow: inset 0 0 0 1px rgba(15, 118, 110, 0.18);
 }
 
 .rp-help-request-card {
-  min-height: 198px;
+  --rp-help-card-accent: var(--rp-help-blue);
+  --rp-help-card-bg: #EFF6FF;
+  min-height: 210px;
+  position: relative;
+  padding-top: 4px;
   display: grid;
   align-content: space-between;
   gap: 18px;
+  box-shadow: inset 0 3px 0 var(--rp-help-card-accent);
+  transition: transform 150ms ease, filter 150ms ease;
+}
+
+.rp-help-request-card:hover {
+  filter: saturate(1.04);
+  transform: translateY(-1px);
+}
+
+.rp-help-request-card.is-coral {
+  --rp-help-card-accent: var(--rp-help-coral);
+  --rp-help-card-bg: #FFF7ED;
+}
+
+.rp-help-request-card.is-amber {
+  --rp-help-card-accent: var(--rp-help-amber);
+  --rp-help-card-bg: #FFFBEB;
+}
+
+.rp-help-request-card.is-blue {
+  --rp-help-card-accent: var(--rp-help-blue);
+  --rp-help-card-bg: #EFF6FF;
+}
+
+.rp-help-request-card > .Polaris-InlineStack {
+  min-width: 0;
+  padding: 10px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--rp-help-card-bg) 0%, rgba(255, 255, 255, 0) 72%);
 }
 
 .rp-help-shopify-note {
-  padding: 12px;
-  border: 1px solid var(--rp-preview-border);
+  padding: 14px;
+  border: 1px solid rgba(29, 78, 216, 0.16);
   border-radius: 8px;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   gap: 12px;
   align-items: start;
-  background: var(--rp-preview-surface);
+  background: linear-gradient(135deg, #EFF6FF 0%, #ECFDF3 100%);
 }
 
 .rp-help-service-item {
-  padding: 12px;
-  border: 1px solid var(--rp-border);
+  padding: 14px;
+  border: 1px solid rgba(17, 24, 39, 0.08);
   border-radius: 8px;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   gap: 12px;
   align-items: start;
-  background: var(--rp-platform-chip-surface);
+  background: linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.84);
+}
+
+.rp-help-tailored-note {
+  padding: 16px;
+  border: 1px solid rgba(194, 65, 12, 0.16);
+  border-radius: 8px;
+  background: linear-gradient(135deg, #FFF7ED 0%, #FFFFFF 58%, #F8FAFC 100%);
 }
 
 .rp-help-contact-panel {
@@ -2269,33 +2440,34 @@ select {
 }
 
 .rp-help-email-box {
-  padding: 12px 14px;
-  border: 1px solid var(--rp-preview-border);
+  padding: 13px 15px;
+  border: 1px solid rgba(29, 78, 216, 0.18);
   border-radius: 8px;
-  background: var(--rp-preview-surface);
+  background: linear-gradient(135deg, #EFF6FF 0%, #F8FAFC 100%);
   color: var(--rp-preview-text);
   font: 0.9rem/1.45 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
   overflow-wrap: anywhere;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
 }
 
 .rp-help-data-panel {
   min-width: 0;
-  padding: 16px;
-  border: 1px solid var(--rp-border);
+  padding: 18px;
+  border: 1px solid rgba(17, 24, 39, 0.08);
   border-radius: 8px;
   display: grid;
   gap: 14px;
   align-content: start;
-  background: var(--rp-card-surface);
+  background: linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%);
 }
 
 .rp-help-data-panel.is-accent {
-  background: var(--rp-attention-surface);
-  border-color: var(--rp-attention-border);
+  background: linear-gradient(135deg, #FFFBEB 0%, #FFF7ED 100%);
+  border-color: rgba(180, 83, 9, 0.22);
 }
 
 .rp-help-data-row span {
-  color: var(--rp-edited-text);
+  color: var(--rp-help-coral);
   font-weight: 800;
   line-height: 1.45;
 }
@@ -2354,6 +2526,7 @@ select {
   color: var(--rp-platform-chip-text);
   font-weight: 760;
   overflow: hidden;
+  margin-right: 10px;
 }
 
 .rp-connect-provider-mark.is-teal {
@@ -2385,6 +2558,7 @@ select {
   width: 34px;
   height: 34px;
   object-fit: contain;
+  margin-right: 5px;
 }
 
 .rp-connect-provider-mark.is-wordmark .rp-connect-provider-logo {
@@ -2633,6 +2807,22 @@ select {
     grid-template-columns: 1fr;
   }
 
+  .rp-help-hero {
+    min-height: auto;
+    padding: 26px;
+    background-position: 68% center;
+  }
+
+  .rp-help-hero::before {
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(255, 255, 255, 0.78) 100%),
+      linear-gradient(135deg, rgba(15, 118, 110, 0.12), rgba(194, 65, 12, 0.1));
+  }
+
+  .rp-help-hero-panel {
+    align-self: stretch;
+  }
+
   .rp-personality-builder-layout {
     grid-template-columns: 1fr;
   }
@@ -2703,5 +2893,31 @@ select {
 
   .rp-stat {
     border-right: 0;
+  }
+
+  .rp-help-page .Polaris-Card {
+    box-shadow: 0 8px 22px rgba(17, 24, 39, 0.05);
+  }
+
+  .rp-help-hero {
+    padding: 20px;
+    gap: 20px;
+    background-position: 72% center;
+  }
+
+  .rp-help-hero-panel {
+    padding: 18px;
+  }
+
+  .rp-help-request-card {
+    min-height: 184px;
+  }
+
+  .rp-help-request-card > .Polaris-InlineStack {
+    padding: 8px;
+  }
+
+  .rp-help-email-box {
+    font-size: 0.82rem;
   }
 }

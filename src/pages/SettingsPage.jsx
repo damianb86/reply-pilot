@@ -36,24 +36,11 @@ const defaultSettings = {
   sendReplyEmail: false,
   useProductDescription: true,
   onboardingCompleted: false,
-  defaultQueueRange: '7-days',
-  defaultQueueSort: 'newest',
   showSkippedByDefault: false,
   showSentByDefault: false,
   dataRetention: '12-months',
   timezone: 'America/Argentina/Cordoba',
 };
-
-const queueRangeOptions = [
-  {label: 'Last 7 days', value: '7-days'},
-  {label: 'Last 30 days', value: '30-days'},
-  {label: 'All time', value: 'all'},
-];
-
-const queueSortOptions = [
-  {label: 'Newest first', value: 'newest'},
-  {label: 'Oldest first', value: 'oldest'},
-];
 
 const retentionOptions = [
   {label: '12 months', value: '12-months'},
@@ -247,7 +234,7 @@ export default function SettingsPage() {
         <BlockStack gap="100">
           <Text as="h1" variant="heading2xl">Settings</Text>
           <Text as="p" variant="bodyLg" tone="subdued">
-            Configure app defaults and tune the Brand Voice ReplyPulse AI: Review Replies uses for AI replies.
+            Configure app defaults and tune the Brand Voice ReplyPulse uses for AI replies.
           </Text>
         </BlockStack>
         {!isBrandVoiceSection ? (
@@ -297,24 +284,6 @@ export default function SettingsPage() {
               title="General"
               description="Set the defaults the Inbox uses when merchants open the queue."
             >
-              <FieldRow label="Default queue range" description="Initial Inbox date filter. Merchants can still change it in Queue.">
-                <Select
-                  label="Default queue range"
-                  labelHidden
-                  options={queueRangeOptions}
-                  value={settings.defaultQueueRange}
-                  onChange={(value) => set('defaultQueueRange', value)}
-                />
-              </FieldRow>
-              <FieldRow label="Default queue sort" description="Initial row order for reviews in Queue.">
-                <Select
-                  label="Default queue sort"
-                  labelHidden
-                  options={queueSortOptions}
-                  value={settings.defaultQueueSort}
-                  onChange={(value) => set('defaultQueueSort', value)}
-                />
-              </FieldRow>
               <FieldRow label="Show skipped by default" description="Includes skipped reviews when Queue first loads.">
                 <Checkbox
                   label="Show skipped by default"
@@ -335,7 +304,7 @@ export default function SettingsPage() {
           {activeSection === 'queue' ? (
             <SectionCard
               title="Queue behavior"
-              description="Control how ReplyPulse AI: Review Replies marks drafts for review and how Judge.me sends approved replies."
+              description="Control how ReplyPulse marks drafts for review and provider-specific send options."
               action={<Badge tone="info">Applies on next generation/send</Badge>}
             >
               <ThresholdSlider
@@ -370,7 +339,7 @@ export default function SettingsPage() {
                   onChange={(value) => set('routeLowStarReviews', value)}
                 />
               </FieldRow>
-              <FieldRow label="Send Judge.me reply email" description="When enabled, Judge.me also emails the customer after an approved reply is sent.">
+              <FieldRow label="Send Judge.me reply email" description="Judge.me only. Yotpo public comments do not use this setting.">
                 <Checkbox
                   label="Send Judge.me reply email"
                   checked={settings.sendReplyEmail}
@@ -383,7 +352,7 @@ export default function SettingsPage() {
           {activeSection === 'privacy' ? (
             <SectionCard
               title="Data & privacy"
-              description="Control how long sent and skipped review history remains available in ReplyPulse AI: Review Replies."
+              description="Control how long sent and skipped review history remains available in ReplyPulse."
               action={(
                 <Button
                   loading={cleanupTimeout.pending}

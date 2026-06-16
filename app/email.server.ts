@@ -1,6 +1,6 @@
 import nodemailer from "nodemailer";
 
-const APP_NAME = "ReplyPulse AI: Review Replies";
+const APP_NAME = "Reply Pulse AI: Review Replies";
 const DEFAULT_FROM_EMAIL = "noreply@zuam.dev";
 const DEFAULT_FROM_NAME = "Zuam ReplyPulse AI";
 

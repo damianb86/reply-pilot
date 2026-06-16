@@ -11,6 +11,7 @@ import IguShell from "../components/IguShell";
 import PageLoadingState from "../../src/PageLoadingState";
 import { getCreditOverview } from "../credits.server";
 import { loadAppSettings } from "../settings.server";
+import { canAccessBeforeOnboarding } from "../onboarding-access.server";
 
 function pathWithEmbeddedParams(url: URL, pathname: string) {
   const nextUrl = new URL(pathname, url.origin);
@@ -25,9 +26,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
   const url = new URL(request.url);
   const settings = await loadAppSettings(session.shop);
-  const isOnboardingRoute = url.pathname.endsWith("/app/onboarding");
 
-  if (!settings.onboardingCompleted && !isOnboardingRoute) {
+  if (!settings.onboardingCompleted && !canAccessBeforeOnboarding(url.pathname)) {
     return redirect(pathWithEmbeddedParams(url, "/app/onboarding"));
   }
 
@@ -71,7 +71,7 @@ function loadingCopyForPath(pathname: string) {
   if (pathname.endsWith("/onboarding")) {
     return {
       title: "Loading Setup",
-      description: "Preparing your first ReplyPulse AI: Review Replies setup steps...",
+      description: "Preparing your first ReplyPulse setup steps...",
     };
   }
 
@@ -116,7 +116,7 @@ export default function App() {
     <ShopifyAppProvider embedded apiKey={apiKey}>
       <PolarisAppProvider i18n={enTranslations}>
         <NavMenu>
-          <a href={withEmbeddedSearch("/app")} rel="home">ReplyPulse AI: Review Replies</a>
+          <a href={withEmbeddedSearch("/app")} rel="home">Reply Pulse AI: Review Replies</a>
           <a href={withEmbeddedSearch("/app/dashboard")}>Connect</a>
           <a href={withEmbeddedSearch("/app/reviews")}>Reviews</a>
           <a href={withEmbeddedSearch("/app/logs")}>Sent</a>

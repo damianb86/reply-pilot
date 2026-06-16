@@ -70,7 +70,7 @@ require_file "$LOCAL_ENV_FILE" "Missing production env file: $LOCAL_ENV_FILE"
 
 chmod 400 "$PEM_FILE" 2>/dev/null || true
 
-printf 'Deploying ReplyPulse AI: Review Replies production build\n'
+printf 'Deploying Reply Pulse AI: Review Replies production build\n'
 printf '  local app:   %s\n' "$APP_DIR"
 printf '  build env:   %s\n' "$LOCAL_ENV_FILE"
 printf '  server:      %s\n' "$SSH_TARGET"
@@ -141,8 +141,15 @@ if [ -n "$REMOTE_GIT_PULL_COMMAND" ]; then
   finish_step
 fi
 
-start_step "Uploading build directory to production server"
+start_step "Uploading runtime files to production server"
 rsync -az --delete -e "$RSYNC_SSH" "$APP_DIR/build/" "$SSH_TARGET:$REMOTE_APP_DIR/build/"
+rsync -az --delete -e "$RSYNC_SSH" "$APP_DIR/prisma/" "$SSH_TARGET:$REMOTE_APP_DIR/prisma/"
+rsync -az --delete -e "$RSYNC_SSH" "$APP_DIR/scripts/" "$SSH_TARGET:$REMOTE_APP_DIR/scripts/"
+rsync -az -e "$RSYNC_SSH" \
+  "$APP_DIR/Dockerfile" \
+  "$APP_DIR/package.json" \
+  "$APP_DIR/package-lock.json" \
+  "$SSH_TARGET:$REMOTE_APP_DIR/"
 finish_step
 
 start_step "Running remote deploy"

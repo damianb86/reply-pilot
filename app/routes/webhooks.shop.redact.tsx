@@ -18,6 +18,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     db.reviewDraft.deleteMany({ where: { shop: shopDomain } }),
     db.brandVoiceSetting.deleteMany({ where: { shop: shopDomain } }),
     db.judgeMeConnection.deleteMany({ where: { shop: shopDomain } }),
+    db.yotpoConnection.deleteMany({ where: { shop: shopDomain } }),
     db.appSetting.deleteMany({ where: { shop: shopDomain } }),
     db.creditLedgerEntry.deleteMany({ where: { shop: shopDomain } }),
     db.creditPurchase.deleteMany({ where: { shop: shopDomain } }),

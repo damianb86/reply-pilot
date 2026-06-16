@@ -55,6 +55,25 @@ model JudgeMeConnection {
   @@index([shop, status])
 }
 
+model YotpoConnection {
+  id                 String    @id @default(cuid())
+  shop               String    @unique
+  storeId            String
+  authMethod         String
+  encryptedApiSecret String
+  secretMask         String
+  status             String    @default("connected")
+  reviewCount        Int?
+  lastVerifiedAt     DateTime?
+  lastError          String?
+  accountJson        String?
+  sampleReviewsJson  String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([shop, status])
+}
+
 model ReviewDraft {
   id               String    @id @default(cuid())
   shop             String

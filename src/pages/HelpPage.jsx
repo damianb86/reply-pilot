@@ -35,9 +35,9 @@ const requestCards = [
     id: 'customization',
     icon: WrenchIcon,
     tone: 'coral',
-    title: 'Configure ReplyPulse AI: Review Replies',
-    description: 'Adapt review approval, AI generation, routing, and ReplyPulse AI: Review Replies workflows to the way your team handles reviews.',
-    action: 'Describe review workflow',
+    title: 'Tailor ReplyPulse',
+    description: 'Share the review workflow your store needs, from small adjustments to a more guided experience for your team.',
+    action: 'Describe store needs',
   },
   {
     id: 'suggestion',
@@ -60,8 +60,8 @@ const requestCards = [
 const customizationServices = [
   {
     icon: SettingsIcon,
-    title: 'Queue and approval workflows',
-    text: 'Review routing, team handoffs, confidence rules, skipped/sent views, and batch approval flows inside ReplyPulse AI: Review Replies.',
+    title: 'Store-specific workflows',
+    text: 'Review routing, team handoffs, confidence rules, skipped/sent views, and approval flows that match how your store operates.',
   },
   {
     icon: MagicIcon,
@@ -71,7 +71,7 @@ const customizationServices = [
   {
     icon: CodeIcon,
     title: 'Review provider setup',
-    text: 'Help connecting supported review providers, Shopify product context, and ReplyPulse AI: Review Replies approval workflows.',
+    text: 'Help connecting supported review providers, Shopify product context, and ReplyPulse approval workflows.',
   },
 ];
 
@@ -92,12 +92,12 @@ const heroChecklist = [
 
 const modalContent = {
   customization: {
-    title: 'Request customization',
+    title: 'Request tailored setup',
     type: 'customization',
-    subjectPlaceholder: 'Custom review workflow',
-    messageLabel: 'What should ReplyPulse AI: Review Replies adapt?',
+    subjectPlaceholder: 'Store-specific review workflow',
+    messageLabel: 'What should ReplyPulse adapt for your store?',
     messagePlaceholder: 'Example: Add a review escalation flow for low-confidence replies before anyone sends them.',
-    intro: 'Share the current review workflow, what feels slow or risky, and what ReplyPulse AI: Review Replies should support.',
+    intro: 'Share the current workflow, what feels slow or risky, and whether your store needs a small adjustment, a deeper workflow change, or a more tailored experience.',
     primary: 'Send request',
   },
   suggestion: {
@@ -112,7 +112,7 @@ const modalContent = {
   support: {
     title: 'Contact support',
     type: 'support',
-    subjectPlaceholder: 'Question about ReplyPulse AI: Review Replies',
+    subjectPlaceholder: 'Question about ReplyPulse',
     messageLabel: 'How can we help?',
     messagePlaceholder: 'Example: my review provider is connected, but the Queue is not importing my newest reviews.',
     intro: 'Send enough context for us to understand or reproduce the issue.',
@@ -131,7 +131,7 @@ function HelpIcon({source, tone = 'blue', size = 'md'}) {
 function RequestCard({card, onAction}) {
   return (
     <Card>
-      <div className="rp-help-request-card">
+      <div className={`rp-help-request-card is-${card.tone}`}>
         <InlineStack gap="300" blockAlign="start" wrap={false}>
           <HelpIcon source={card.icon} tone={card.tone} />
           <BlockStack gap="100">
@@ -167,6 +167,7 @@ function summaryText(data) {
     data.message,
     `${counts.reviews} reviews/drafts`,
     `${counts.judgeMeConnections} Judge.me connection(s)`,
+    `${counts.yotpoConnections || 0} Yotpo connection(s)`,
     `${counts.creditLedgerEntries} credit ledger entries`,
   ].join(' ');
 }
@@ -269,21 +270,22 @@ export default function HelpPage() {
   }
 
   return (
-    <BlockStack gap="400">
-      {localToast ? (
-        <div className={`rp-local-toast ${localToast.isError ? 'is-error' : ''}`} role="status">
-          {localToast.message}
-        </div>
-      ) : null}
+    <div className="rp-help-page">
+      <BlockStack gap="400">
+        {localToast ? (
+          <div className={`rp-local-toast ${localToast.isError ? 'is-error' : ''}`} role="status">
+            {localToast.message}
+          </div>
+        ) : null}
 
-      <InlineStack align="space-between" blockAlign="center" gap="300">
-        <BlockStack gap="100">
-          <Text as="h1" variant="heading2xl">Help</Text>
-          <Text as="p" variant="bodyLg" tone="subdued">
-            Workflow setup, product feedback, app support, and data controls for ReplyPulse AI: Review Replies.
-          </Text>
-        </BlockStack>
-      </InlineStack>
+        <div className="rp-help-header">
+          <BlockStack gap="100">
+            <Text as="h1" variant="heading2xl">Help</Text>
+            <Text as="p" variant="bodyLg" tone="subdued">
+              Workflow setup, product feedback, app support, and data controls for ReplyPulse.
+            </Text>
+          </BlockStack>
+        </div>
 
       <section className="rp-help-hero">
         <div className="rp-help-hero-copy">
@@ -293,13 +295,13 @@ export default function HelpPage() {
             <Badge>Workflow setup</Badge>
           </InlineStack>
           <BlockStack gap="150">
-            <Text as="h2" variant="heading2xl">Make ReplyPulse AI: Review Replies fit the way your store works.</Text>
+            <Text as="h2" variant="heading2xl">Make ReplyPulse fit the way your store works.</Text>
             <Text as="p" variant="bodyLg" tone="subdued">
-              Our team can tune ReplyPulse AI: Review Replies, improve your approval flow, and help connect supported review operations to Shopify.
+              Our team can tune ReplyPulse, improve your approval flow, and help connect supported review operations to Shopify.
             </Text>
           </BlockStack>
           <InlineStack gap="200">
-            <Button variant="primary" icon={WrenchIcon} onClick={() => setOpenModal('customization')}>ReplyPulse AI: Review Replies setup</Button>
+            <Button variant="primary" icon={WrenchIcon} onClick={() => setOpenModal('customization')}>ReplyPulse setup</Button>
             <Button icon={LightbulbIcon} onClick={() => setOpenModal('suggestion')}>Suggest an improvement</Button>
           </InlineStack>
         </div>
@@ -325,7 +327,7 @@ export default function HelpPage() {
             <BlockStack gap="050">
               <Text as="p" variant="bodyMd" fontWeight="semibold">Need setup help?</Text>
               <Text as="p" variant="bodySm" tone="subdued">
-                Our team can help with ReplyPulse AI: Review Replies setup, supported review providers, product context, and approval workflows.
+                Our team can help with ReplyPulse setup, supported review providers, product context, and approval workflows.
               </Text>
             </BlockStack>
           </div>
@@ -348,9 +350,9 @@ export default function HelpPage() {
             <InlineStack gap="300" blockAlign="center">
               <HelpIcon source={StoreIcon} tone="blue" />
               <BlockStack gap="050">
-                <Text as="h2" variant="headingLg">What we can customize</Text>
+                <Text as="h2" variant="headingLg">What we can tailor</Text>
                 <Text as="p" variant="bodyMd" tone="subdued">
-                  Keep the app simple day to day, and add the specific behavior your team needs.
+                  Keep the app simple day to day, and shape the specific behavior your store needs.
                 </Text>
               </BlockStack>
             </InlineStack>
@@ -359,6 +361,18 @@ export default function HelpPage() {
                 <ServiceItem key={item.title} item={item} />
               ))}
             </BlockStack>
+            <div className="rp-help-tailored-note">
+              <InlineStack gap="300" blockAlign="start" wrap={false}>
+                <HelpIcon source={WrenchIcon} tone="coral" size="sm" />
+                <BlockStack gap="100">
+                  <Text as="p" variant="bodyMd" fontWeight="semibold">Need a more specific fit?</Text>
+                  <Text as="p" variant="bodyMd" tone="subdued">
+                    If ReplyPulse is close but your store needs something more specific, send the use case. We can review focused adjustments, deeper workflow changes, or a dedicated experience shaped around your team.
+                  </Text>
+                  <Button onClick={() => setOpenModal('customization')}>Discuss tailored setup</Button>
+                </BlockStack>
+              </InlineStack>
+            </div>
           </BlockStack>
         </Card>
 
@@ -389,7 +403,7 @@ export default function HelpPage() {
               <BlockStack gap="050">
                 <Text as="h2" variant="headingLg">Data & privacy</Text>
                 <Text as="p" variant="bodyMd" tone="subdued">
-                  Review what ReplyPulse AI: Review Replies stores and request deletion from inside the app.
+                  Review what ReplyPulse stores and request deletion from inside the app.
                 </Text>
               </BlockStack>
             </InlineStack>
@@ -442,86 +456,87 @@ export default function HelpPage() {
         </BlockStack>
       </Card>
 
-      <Modal
-        open={privacyDeleteOpen}
-        onClose={() => setPrivacyDeleteOpen(false)}
-        title="Delete all ReplyPulse AI: Review Replies data?"
-        primaryAction={{
-          content: 'Delete permanently',
-          destructive: true,
-          loading: isPrivacySubmitting,
-          disabled: isPrivacySubmitting,
-          onAction: deletePrivacyData,
-        }}
-        secondaryActions={[
-          {
-            content: 'Cancel',
+        <Modal
+          open={privacyDeleteOpen}
+          onClose={() => setPrivacyDeleteOpen(false)}
+          title="Delete all ReplyPulse data?"
+          primaryAction={{
+            content: 'Delete permanently',
+            destructive: true,
+            loading: isPrivacySubmitting,
             disabled: isPrivacySubmitting,
-            onAction: () => setPrivacyDeleteOpen(false),
-          },
-        ]}
-      >
-        <Modal.Section>
-          <BlockStack gap="300">
-            <Text as="p" variant="bodyMd">
-              This permanently deletes review records, AI drafts, Brand Voice settings, review provider connection data, app settings, credit records, contact requests, and Shopify sessions for this shop.
-            </Text>
-            <Text as="p" variant="bodyMd" tone="subdued">
-              This action cannot be undone. You may be asked to log in again after deletion.
-            </Text>
-          </BlockStack>
-        </Modal.Section>
-      </Modal>
+            onAction: deletePrivacyData,
+          }}
+          secondaryActions={[
+            {
+              content: 'Cancel',
+              disabled: isPrivacySubmitting,
+              onAction: () => setPrivacyDeleteOpen(false),
+            },
+          ]}
+        >
+          <Modal.Section>
+            <BlockStack gap="300">
+              <Text as="p" variant="bodyMd">
+                This permanently deletes review records, AI drafts, Brand Voice settings, review provider connection data, app settings, credit records, contact requests, and Shopify sessions for this shop.
+              </Text>
+              <Text as="p" variant="bodyMd" tone="subdued">
+                This action cannot be undone. You may be asked to log in again after deletion.
+              </Text>
+            </BlockStack>
+          </Modal.Section>
+        </Modal>
 
-      <Modal
-        open={Boolean(activeModal)}
-        onClose={closeContactModal}
-        title={activeModal?.title ?? 'Contact'}
-        primaryAction={{
-          content: activeModal?.primary ?? 'Send',
-          onAction: submitContact,
-          loading: isSubmitting,
-          disabled: isSubmitting || !message.trim(),
-        }}
-        secondaryActions={[
-          {
-            content: 'Cancel',
-            onAction: closeContactModal,
-            disabled: isSubmitting,
-          },
-        ]}
-      >
-        <Modal.Section>
-          <BlockStack gap="300">
-            {activeModal?.intro ? (
-              <Text as="p" variant="bodyMd" tone="subdued">{activeModal.intro}</Text>
-            ) : null}
-            <TextField
-              label={activeModal?.messageLabel ?? 'Message'}
-              value={message}
-              onChange={setMessage}
-              multiline={5}
-              autoComplete="off"
-              placeholder={activeModal?.messagePlaceholder}
-            />
-            <TextField
-              label="Subject"
-              value={subject}
-              onChange={setSubject}
-              autoComplete="off"
-              placeholder={activeModal?.subjectPlaceholder}
-            />
-            <TextField
-              label="Reply email"
-              value={email}
-              onChange={setEmail}
-              type="email"
-              autoComplete="email"
-              placeholder="you@store.com"
-            />
-          </BlockStack>
-        </Modal.Section>
-      </Modal>
-    </BlockStack>
+        <Modal
+          open={Boolean(activeModal)}
+          onClose={closeContactModal}
+          title={activeModal?.title ?? 'Contact'}
+          primaryAction={{
+            content: activeModal?.primary ?? 'Send',
+            onAction: submitContact,
+            loading: isSubmitting,
+            disabled: isSubmitting || !message.trim(),
+          }}
+          secondaryActions={[
+            {
+              content: 'Cancel',
+              onAction: closeContactModal,
+              disabled: isSubmitting,
+            },
+          ]}
+        >
+          <Modal.Section>
+            <BlockStack gap="300">
+              {activeModal?.intro ? (
+                <Text as="p" variant="bodyMd" tone="subdued">{activeModal.intro}</Text>
+              ) : null}
+              <TextField
+                label={activeModal?.messageLabel ?? 'Message'}
+                value={message}
+                onChange={setMessage}
+                multiline={5}
+                autoComplete="off"
+                placeholder={activeModal?.messagePlaceholder}
+              />
+              <TextField
+                label="Subject"
+                value={subject}
+                onChange={setSubject}
+                autoComplete="off"
+                placeholder={activeModal?.subjectPlaceholder}
+              />
+              <TextField
+                label="Reply email"
+                value={email}
+                onChange={setEmail}
+                type="email"
+                autoComplete="email"
+                placeholder="you@store.com"
+              />
+            </BlockStack>
+          </Modal.Section>
+        </Modal>
+      </BlockStack>
+    </div>
   );
 }

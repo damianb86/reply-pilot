@@ -224,10 +224,10 @@ function firstPurchaseBonusCredits(credits: number) {
 function creditPurchaseBillingName(pkg: (typeof CREDIT_PACKAGES)[number], bonusCredits: number) {
   const totalCredits = pkg.credits + bonusCredits;
   if (bonusCredits > 0) {
-    return `ReplyPulse AI: Review Replies ${formatCreditCount(totalCredits)} credits (${formatCreditCount(pkg.credits)} + ${formatCreditCount(bonusCredits)} first-purchase bonus)`;
+    return `ReplyPulse ${formatCreditCount(totalCredits)} credits (${formatCreditCount(pkg.credits)} + ${formatCreditCount(bonusCredits)} first-purchase bonus)`;
   }
 
-  return `ReplyPulse AI: Review Replies ${formatCreditCount(pkg.credits)} credits`;
+  return `ReplyPulse ${formatCreditCount(pkg.credits)} credits`;
 }
 
 function packageView(pkg: (typeof CREDIT_PACKAGES)[number], includeFirstPurchaseBonus = false) {

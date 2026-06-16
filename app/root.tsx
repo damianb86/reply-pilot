@@ -7,10 +7,10 @@ export const loader = () => ({
 });
 
 export const meta = () => [
-  { title: "ReplyPulse AI: Review Replies" },
+  { title: "Reply Pulse AI: Review Replies" },
   {
     name: "description",
-    content: "ReplyPulse AI: Review Replies helps Shopify merchants draft and manage product review replies.",
+    content: "ReplyPulse helps Shopify merchants draft and manage product review replies.",
   },
 ];
 

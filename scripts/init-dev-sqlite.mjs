@@ -84,6 +84,30 @@ await prisma.$executeRawUnsafe(`
 `);
 
 await prisma.$executeRawUnsafe(`
+  CREATE TABLE IF NOT EXISTS "YotpoConnection" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "shop" TEXT NOT NULL UNIQUE,
+    "storeId" TEXT NOT NULL,
+    "authMethod" TEXT NOT NULL,
+    "encryptedApiSecret" TEXT NOT NULL,
+    "secretMask" TEXT NOT NULL,
+    "status" TEXT NOT NULL DEFAULT 'connected',
+    "reviewCount" INTEGER,
+    "lastVerifiedAt" DATETIME,
+    "lastError" TEXT,
+    "accountJson" TEXT,
+    "sampleReviewsJson" TEXT,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )
+`);
+
+await prisma.$executeRawUnsafe(`
+  CREATE INDEX IF NOT EXISTS "YotpoConnection_shop_status_idx"
+  ON "YotpoConnection"("shop", "status")
+`);
+
+await prisma.$executeRawUnsafe(`
   CREATE TABLE IF NOT EXISTS "ReviewDraft" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "shop" TEXT NOT NULL,
