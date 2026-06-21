@@ -60,4 +60,7 @@ npm run deploy
 ## SMTP
 
 Production contact and privacy emails require `CONTACT_EMAIL`, `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_USER`, and `EMAIL_PASS`.
-When using Gmail SMTP, `EMAIL_PASS` must be a Gmail App Password.
+Use Resend SMTP for outbound email from the verified `zuam.dev` domain:
+`EMAIL_HOST=smtp.resend.com`, `EMAIL_PORT=587`, `EMAIL_SECURE=false`,
+`EMAIL_USER=resend`, and `EMAIL_PASS=<Resend API key>`. Keep Cloudflare Email
+Routing only for inbound delivery to `CONTACT_EMAIL`.

@@ -39,8 +39,12 @@ services:
       CONTACT_EMAIL: ${CONTACT_EMAIL:?Set CONTACT_EMAIL in the app .env}
       EMAIL_HOST: ${EMAIL_HOST:?Set EMAIL_HOST in the app .env}
       EMAIL_PORT: ${EMAIL_PORT:?Set EMAIL_PORT in the app .env}
+      EMAIL_SECURE: ${EMAIL_SECURE:-false}
       EMAIL_USER: ${EMAIL_USER:?Set EMAIL_USER in the app .env}
       EMAIL_PASS: ${EMAIL_PASS:?Set EMAIL_PASS in the app .env}
+      EMAIL_FROM: ${EMAIL_FROM:-noreply@zuam.dev}
+      EMAIL_FROM_NAME: ${EMAIL_FROM_NAME:-Zuam ReplyPulse AI}
+      EMAIL_REPLY_TO: ${EMAIL_REPLY_TO:-contact@zuam.dev}
       OPENAI_API_KEY: ${OPENAI_API_KEY:?Set OPENAI_API_KEY in the app .env}
       JUDGEME_API_BASE_URL: ${JUDGEME_API_BASE_URL:-https://judge.me/api/v1}
       JUDGEME_API_TIMEOUT_MS: ${JUDGEME_API_TIMEOUT_MS:-10000}
